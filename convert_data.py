@@ -10,7 +10,7 @@ import pickle
 
 print("CURRENTLY ONLY USING SINGLE FILE")
 convert = input('Have you aleady performed the conversion? (y/n) ')
-if convert == 'y':
+if convert == 'n':
     mat_contents = sio.loadmat('../preprocessed/datathetaOscTLbyTimeV_FAC001.mat')
 
     X_memory = mat_contents['dataMatM']
