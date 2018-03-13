@@ -66,6 +66,7 @@ local.properties
 .idea/**/tasks.xml
 .idea/dictionaries
 res/
+preprocessed/
 
 # Sensitive or high-churn files:
 .idea/**/dataSources/
