@@ -1,5 +1,6 @@
 import scipy.io as sio
 import pickle
+import numpy as np
 
 ########n#####################################
 ## Preperation for this script:
@@ -44,14 +45,25 @@ if load_pickle == 'y':
 		y_perc = pickle.load(fp)
 
 
-seperate = input("Would you like to seperate the lead readings? (y/n)")
-if seperate == 'y':
-	all = []
-	trial = []
-	# roll over every lead, create new matrix
-	for i in range(0, X_memory.shape[0]):
+	seperate = input("Would you like to seperate the lead readings? (y/n)")
+	if seperate == 'y':
+		all = []
 		trial = []
-		for n in range(0,len(X_memory[i])-ch+1,ch)
-			single = [X_memory[i][n:n+ch]]
-			trial.append(single)
-		all.append(trial)
+		# roll over every lead, create new matrix
+		for i in range(0, X_memory.shape[0]):
+			trial = []
+			for n in range(0,len(X_memory[i])-dt+1,dt):
+				single = X_memory[i][n:n+dt]
+				trial.append(single)
+			all.append(trial)
+		X_memory = np.asarray(all)
+		all = []
+		trial = []
+		# roll over every lead, create new matrix
+		for i in range(0, X_perc.shape[0]):
+			trial = []
+			for n in range(0,len(X_perc[i])-dt+1,dt):
+				single = X_perc[i][n:n+dt]
+				trial.append(single)
+			all.append(trial)
+		X_perc = np.asarray(all)
