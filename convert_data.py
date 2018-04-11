@@ -24,7 +24,7 @@ if convert == 'n':
 	X_perc = mat_contents['dataMatP']
 	y_perc = mat_contents['simVecP']
 
-	with open('preprocessed/X_memory{}.pkl'.format(patient), 'wb') as fp:
+	with open('preprocessed/X_memory.pkl', 'wb') as fp:
 		pickle.dump(X_memory, fp)
 	with open('preprocessed/y_memory.pkl', 'wb') as fp:
 		pickle.dump(y_memory, fp)
@@ -67,3 +67,7 @@ if load_pickle == 'y':
 				trial.append(single)
 			all.append(trial)
 		X_perc = np.asarray(all)
+		with open('preprocessed/X_memory.pkl', 'wb') as fp:
+			pickle.dump(X_memory, fp)
+		with open('preprocessed/X_perc.pkl', 'wb') as fp:
+			pickle.dump(X_perc, fp)
