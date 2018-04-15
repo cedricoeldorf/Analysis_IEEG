@@ -48,11 +48,10 @@ def mlp():
 
 
 def main():
-	# knn(i)
+	knn()
 	# random_forest()
 	# svm()
-	mlp()
-
+	# mlp()
 
 if __name__ == '__main__':
 	main()
