@@ -21,47 +21,47 @@ leads = X_memory.shape[1]
 time_steps = X_memory.shape[2]
 
 total = [[] for i in range(leads)]
-for lead in range(0,leads):
-	for trial in range(0,trials):
+for lead in range(0, leads):
+	for trial in range(0, trials):
 		entry = X_memory[trial][lead]
 		total[lead].append(entry)
 
 total = np.asarray(total)
+
 
 ####################################
 ## Extract statistics for every lead and create AV table
 ####################################
 
 def extract_basic(X):
-    print("extracting basics")
+	print("extracting basics")
 
-    all = [] # will be the whole dataset
+	all = []  # will be the whole dataset
 
 	# Iterate over every trial
-    for i in range(0, X.shape[1]):
-        small = [] # this is temporary list to add to new data set after every iteration
-        feature_names = [] # for later feature extraction, we create a list of names
+	for i in range(0, X.shape[1]):
+		small = []  # this is temporary list to add to new data set after every iteration
+		feature_names = []  # for later feature extraction, we create a list of names
 
 		# get every lead for current trial
-        for j in range(0,X.shape[0]):
-
+		for j in range(0, X.shape[0]):
 			########
 			## mean
-            small.append(X[j][i].mean())
-            feature_names.append("mean_lead_" + str(j+1))
+			small.append(X[j][i].mean())
+			feature_names.append("mean_lead_" + str(j + 1))
 			########
 			## Max
-            small.append(X[j][i].max())
-            feature_names.append("max_lead_" + str(j+1))
+			small.append(X[j][i].max())
+			feature_names.append("max_lead_" + str(j + 1))
 			########
 			## Min
-            small.append(X[j][i].min())
-            feature_names.append("min_lead_" + str(j+1))
+			small.append(X[j][i].min())
+			feature_names.append("min_lead_" + str(j + 1))
 
-        all.append(small)
-    all = np.asarray(all)
-    return all, feature_names
+		all.append(small)
+	all = np.asarray(all)
+	return all, feature_names
 
 
 def extract_advanced(X):
-    print("extracting advanced")
+	print("extracting advanced")

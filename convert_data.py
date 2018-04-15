@@ -17,7 +17,6 @@ if convert == 'n':
 	patient = input('which patient [01-16]')
 	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_FAC0{}.mat'.format(patient))
 
-
 	X_memory = mat_contents['dataMatM']
 	y_memory = mat_contents['simVecM']
 
@@ -44,7 +43,6 @@ if load_pickle == 'y':
 	with open('preprocessed/y_perc.pkl', 'rb') as fp:
 		y_perc = pickle.load(fp)
 
-
 	seperate = input("Would you like to seperate the lead readings? (y/n)")
 	if seperate == 'y':
 		all = []
@@ -52,8 +50,8 @@ if load_pickle == 'y':
 		# roll over every lead, create new matrix
 		for i in range(0, X_memory.shape[0]):
 			trial = []
-			for n in range(0,len(X_memory[i])-dt+1,dt):
-				single = X_memory[i][n:n+dt]
+			for n in range(0, len(X_memory[i]) - dt + 1, dt):
+				single = X_memory[i][n:n + dt]
 				trial.append(single)
 			all.append(trial)
 		X_memory = np.asarray(all)
@@ -62,8 +60,8 @@ if load_pickle == 'y':
 		# roll over every lead, create new matrix
 		for i in range(0, X_perc.shape[0]):
 			trial = []
-			for n in range(0,len(X_perc[i])-dt+1,dt):
-				single = X_perc[i][n:n+dt]
+			for n in range(0, len(X_perc[i]) - dt + 1, dt):
+				single = X_perc[i][n:n + dt]
 				trial.append(single)
 			all.append(trial)
 		X_perc = np.asarray(all)
