@@ -86,6 +86,18 @@ def extract_basic(X):
 			small.append(generalized_mean(X[j][i], p))
 			feature_names.append("generalized_lead_" + str(j+1))
 
+			########
+			## Piecewise Aggregate Approximation
+			## (split series into parts and take mean of each0)
+			## This makes sense as the neurons should be firing in aggregating f,)
+			m1, m2, m3 = PAA(X)
+			small.append(m1)
+			feature_names.append("PAA1_" + str(j+1))
+			small.append(m2)
+			feature_names.append("PAA2_" + str(j+1))
+			small.append(m3)
+			feature_names.append("PAA3_" + str(j+1))
+
 		all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
@@ -115,5 +127,14 @@ def generalized_mean (lead, p):
 		sum *= lead[i]
 	return abs(sum)**(1/p)
 
-def extract_advanced(X):
-	print("extracting advanced")
+## Piecewise Aggregate Approximation
+def PAA(X, split = 3):
+	length = int(len(X)/split)
+	m1 = X[:length]
+	m2 = X[length:length+length]
+	m3 = X[length+length:]
+
+	m1 = m1.mean()
+	m2 = m2.mean()
+	m3 = m3.mean()
+	return m1, m2, m3
