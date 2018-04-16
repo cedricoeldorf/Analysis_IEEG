@@ -48,6 +48,7 @@ def extract_basic(X):
 	print("extracting basics")
 
 	all = []  # will be the whole dataset
+	p = 50	# for generalized mean
 
 	# Iterate over every trial
 	for i in range(0, X.shape[1]):
@@ -68,11 +69,51 @@ def extract_basic(X):
 			## Min
 			small.append(X[j][i].min())
 			feature_names.append("min_lead_" + str(j + 1))
+			########
+			## RMS
+			small.append(RMS(X[j][i]))
+			feature_names.append("rms_lead_" + str(j+1))
+			########
+			## harmonic
+			small.append(harmonic(X[j][i]))
+			feature_names.append("harmonic_lead_" + str(j+1))
+			########
+			## geometric
+			small.append(geometric(X[j][i]))
+			feature_names.append("geometric_lead_" + str(j+1))
+			########
+			## generalized
+			small.append(generalized_mean(X[j][i], p))
+			feature_names.append("generalized_lead_" + str(j+1))
 
 		all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
+def RMS (lead):
+	sum = 0
+	for i in range(len(lead)):
+		sum += lead[i]**2
+	return np.sqrt(sum/len(lead))
+
+def harmonic (lead):
+	sum = 0
+	for i in range(len(lead)):
+		sum += 1/lead[i]
+	return len(lead)/sum
+
+def geometric (lead):
+	sum = 1
+	for i in range(len(lead)):
+		if lead[i] != 0:
+			sum *= lead[i]
+	return abs(sum)**(1/len(lead))
+
+def generalized_mean (lead, p):
+	sum = 1
+	for i in range(len(lead)):
+		sum *= lead[i]
+	return abs(sum)**(1/p)
 
 def extract_advanced(X):
 	print("extracting advanced")
