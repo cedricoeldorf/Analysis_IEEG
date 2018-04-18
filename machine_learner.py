@@ -72,31 +72,66 @@ def xgboost():
 	feat_info = input("Would you like to get feature info? (y/n) ")
 
 	if feat_info == 'y':
-		gbm = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01)
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
 
-		selector = RFE(gbm, step=100, verbose=2)
+		print("Perception...")
+		selector = RFE(gbm, step=100, verbose = 2)
 		selector.fit(av_perc, y_perc)
 		feats = selector.support_
 		feats_ind = [i for i, x in enumerate(feats) if x]
-		print([feature_names_perc[i] for i in (feats_ind)])
+		selected_features = [feature_names_perc[i] for i in (feats_ind)]
+		lead_freq = [s[-3:] for s in selected_features]
+		lead_freq = [s.replace('_', '') for s in lead_freq]
+		lead_freq = [int(s.replace('d', '')) for s in lead_freq]
+		counts = Counter(np.sort(lead_freq))
+		leads = set(lead_freq)
+		#freq = [len(lead_freq) for key, group in groupby(lead_freq)]
+		plt.bar(counts.keys(), counts.values())
+		plt.ion()
+		plt.title("Perception")
+		plt.show()
+		av_perc = selector.transform(av_perc)
 
-	else:
-		gbm = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01)
+		print("Memory...")
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
+		selector = RFE(gbm, step=100, verbose = 2)
+		selector.fit(av_mem, y_mem)
+		feats = selector.support_
+		feats_ind = [i for i, x in enumerate(feats) if x]
+		selected_features = [feature_names_perc[i] for i in (feats_ind)]
+		lead_freq = [s[-3:] for s in selected_features]
+		lead_freq = [s.replace('_', '') for s in lead_freq]
+		lead_freq = [int(s.replace('d', '')) for s in lead_freq]
+		counts = Counter(np.sort(lead_freq))
+		leads = set(lead_freq)
+		#freq = [len(lead_freq) for key, group in groupby(lead_freq)]
+		plt.bar(counts.keys(), counts.values())
+		plt.ion()
+		plt.title("Memory")
+		plt.show()
+		av_mem = selector.transform(av_mem)
+
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
+		print('perc:', cross_val_score(gbm, av_perc, y_perc, cv=3))
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
 		print('mem:', cross_val_score(gbm, av_mem, y_mem, cv=3))
 
-		gbm = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01)
-		print('perc:', cross_val_score(gbm, av_perc, y_perc, cv=3))
+	else:
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
+		print('mem:', cross_val_score(gbm, av_mem, y_mem, cv=3))
 
+		gbm = xgb.XGBClassifier(max_depth =3, n_estimators = 300, learning_rate = 0.01)
+		print('perc:', cross_val_score(gbm, av_perc, y_perc, cv=3))
 
 def main():
 	make_preprocessed_data()
-	knn()
+	#knn()
 
 
 # random_forest()
 # svm()
 # mlp()
-# xgboost()
+	xgboost()
 
 if __name__ == '__main__':
 	main()
