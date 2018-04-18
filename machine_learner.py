@@ -8,6 +8,8 @@ from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
 import xgboost as xgb
 from sklearn.feature_selection import RFE
+from collections import Counter
+import matplotlib.pyplot as plt
 
 np.random.seed(0)
 patient = 'FAC001'
