@@ -2,6 +2,7 @@ import numpy as np
 import pickle
 import pandas as pd
 
+
 ####################################
 ## Extract statistics for every lead and create AV table
 ####################################
@@ -10,7 +11,7 @@ def extract_basic(X):
 	print("extracting basics")
 
 	all = []  # will be the whole dataset
-	p = 50	# for generalized mean
+	p = 50  # for generalized mean
 
 	# Iterate over every trial
 	for i in range(0, X.shape[1]):
@@ -34,19 +35,19 @@ def extract_basic(X):
 			########
 			## RMS
 			small.append(RMS(X[j][i]))
-			feature_names.append("rms_lead_" + str(j+1))
+			feature_names.append("rms_lead_" + str(j + 1))
 			########
 			## harmonic
 			small.append(harmonic(X[j][i]))
-			feature_names.append("harmonic_lead_" + str(j+1))
+			feature_names.append("harmonic_lead_" + str(j + 1))
 			########
 			## geometric
 			small.append(geometric(X[j][i]))
-			feature_names.append("geometric_lead_" + str(j+1))
+			feature_names.append("geometric_lead_" + str(j + 1))
 			########
 			## generalized
 			small.append(generalized_mean(X[j][i], p))
-			feature_names.append("generalized_lead_" + str(j+1))
+			feature_names.append("generalized_lead_" + str(j + 1))
 
 			########
 			## Piecewise Aggregate Approximation
@@ -54,47 +55,52 @@ def extract_basic(X):
 			## This makes sense as the neurons should be firing in aggregating f,)
 			m1, m2, m3 = PAA(X)
 			small.append(m1)
-			feature_names.append("PAA1_" + str(j+1))
+			feature_names.append("PAA1_" + str(j + 1))
 			small.append(m2)
-			feature_names.append("PAA2_" + str(j+1))
+			feature_names.append("PAA2_" + str(j + 1))
 			small.append(m3)
-			feature_names.append("PAA3_" + str(j+1))
+			feature_names.append("PAA3_" + str(j + 1))
 
 		all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
-def RMS (lead):
+
+def RMS(lead):
 	sum = 0
 	for i in range(len(lead)):
-		sum += lead[i]**2
-	return np.sqrt(sum/len(lead))
+		sum += lead[i] ** 2
+	return np.sqrt(sum / len(lead))
 
-def harmonic (lead):
+
+def harmonic(lead):
 	sum = 0
 	for i in range(len(lead)):
-		sum += 1/lead[i]
-	return len(lead)/sum
+		sum += 1 / lead[i]
+	return len(lead) / sum
 
-def geometric (lead):
+
+def geometric(lead):
 	sum = 1
 	for i in range(len(lead)):
 		if lead[i] != 0:
 			sum *= lead[i]
-	return abs(sum)**(1/len(lead))
+	return abs(sum) ** (1 / len(lead))
 
-def generalized_mean (lead, p):
+
+def generalized_mean(lead, p):
 	sum = 1
 	for i in range(len(lead)):
 		sum *= lead[i]
-	return abs(sum)**(1/p)
+	return abs(sum) ** (1 / p)
+
 
 ## Piecewise Aggregate Approximation
-def PAA(X, split = 3):
-	length = int(len(X)/split)
+def PAA(X, split=3):
+	length = int(len(X) / split)
 	m1 = X[:length]
-	m2 = X[length:length+length]
-	m3 = X[length+length:]
+	m2 = X[length:length + length]
+	m3 = X[length + length:]
 
 	m1 = m1.mean()
 	m2 = m2.mean()
