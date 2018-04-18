@@ -8,14 +8,14 @@ import numpy as np
 ## 2. Download data ( https://unishare.nl/index.php/s/Hk6kYh88aIeVd0Z )
 ## 3. Extract data into parent folder of where you cloned the gihub repo
 ## 4. Run this file, it will save new pickles of our data
-ch = 13
-dt = 128
 
 print("CURRENTLY ONLY USING SINGLE FILE")
 convert = input('Have you aleady performed the conversion? (y/n) ')
 if convert == 'n':
 	patient = input('which patient [01-16]')
 	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_FAC0{}.mat'.format(patient))
+	dt_p = mat_contents['NtimePointsP'][0][0]
+	dt_m = mat_contents['NtimePointsM'][0][0]
 
 	X_memory = mat_contents['dataMatM']
 	y_memory = mat_contents['simVecM']
@@ -31,6 +31,12 @@ if convert == 'n':
 		pickle.dump(X_perc, fp)
 	with open('preprocessed/y_perc.pkl', 'wb') as fp:
 		pickle.dump(y_perc, fp)
+if convert == 'y':
+	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_FAC0{}.mat'.format(patient))
+	dt_p = mat_contents['NtimePointsP'][0][0]
+	dt_m = mat_contents['NtimePointsM'][0][0]
+
+
 
 load_pickle = input('Would you like to load the pickles? (y/n)')
 if load_pickle == 'y':
@@ -48,20 +54,22 @@ if load_pickle == 'y':
 		all = []
 		trial = []
 		# roll over every lead, create new matrix
+
 		for i in range(0, X_memory.shape[0]):
 			trial = []
-			for n in range(0, len(X_memory[i]) - dt + 1, dt):
-				single = X_memory[i][n:n + dt]
+			for n in range(0, len(X_memory[i]) - dt_m + 1, dt_m):
+				single = X_memory[i][n:n + dt_m]
 				trial.append(single)
 			all.append(trial)
 		X_memory = np.asarray(all)
 		all = []
 		trial = []
 		# roll over every lead, create new matrix
+
 		for i in range(0, X_perc.shape[0]):
 			trial = []
-			for n in range(0, len(X_perc[i]) - dt + 1, dt):
-				single = X_perc[i][n:n + dt]
+			for n in range(0, len(X_perc[i]) - dt_p + 1, dt_p):
+				single = X_perc[i][n:n + dt_p]
 				trial.append(single)
 			all.append(trial)
 		X_perc = np.asarray(all)
