@@ -2,7 +2,7 @@ import pickle
 import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score
+from sklearn.model_selection import cross_val_score, GridSearchCV
 from extract_statistics import extract_basic
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
@@ -10,23 +10,39 @@ import xgboost as xgb
 from sklearn.feature_selection import RFE
 
 np.random.seed(0)
+patient = 'FAC001'
 
-dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/FAC004.pkl', 'rb'))
 
-y_mem = y_mem.T.flatten()
-y_perc = y_perc.T.flatten()
+def make_preprocessed_data():
+	global av_mem, feature_names_mem, y_mem, feature_names_perc, av_perc, y_perc
+	dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/FAC001.pkl'.format(patient), 'rb'))
 
-print(dt_p, dt_m, X_mem.shape, y_mem.shape, X_perc.shape, y_perc.shape)
+	y_mem = y_mem.T.flatten()
+	y_perc = y_perc.T.flatten()
 
-av_mem, feature_names_mem = extract_basic(X_mem)
-av_perc, feature_names_perc = extract_basic(X_perc)
+	av_mem, feature_names_mem = extract_basic(X_mem)
+	av_perc, feature_names_perc = extract_basic(X_perc)
+
+	with open('preprocessed/features{}.pkl'.format(patient), 'wb') as fp:
+		pickle.dump([av_mem, feature_names_mem, av_perc, feature_names_perc, y_mem, y_perc], fp)
+
+
+def load_preprocessed_data():
+	global av_mem, feature_names_mem, y_mem, feature_names_perc, av_perc, y_perc
+	with open('preprocessed/features{}.pkl'.format(patient), 'rb') as f:
+		av_mem, feature_names_mem, av_perc, feature_names_perc, y_mem, y_perc = pickle.load(f)
 
 
 def knn():
-	knn = KNeighborsClassifier()
-	print('mem:', cross_val_score(knn, av_mem, y_mem, cv=3))
-	knn = KNeighborsClassifier()
-	print('perc:', cross_val_score(knn, av_perc, y_perc, cv=3))
+	knn = KNeighborsClassifier(n_jobs=-1)
+	parameters = {'leaf_size': np.arange(15,45,5), 'n_neighbors': np.arange(2,25,1)}
+	clf = GridSearchCV(knn, parameters)
+	clf.fit(av_mem, y_mem)
+	print(clf.cv_results_)
+
+	# print('mem:', cross_val_score(knn, av_mem, y_mem, cv=3))
+	# knn = KNeighborsClassifier()
+	# print('perc:', cross_val_score(knn, av_perc, y_perc, cv=3))
 
 
 def random_forest():
@@ -73,6 +89,7 @@ def xgboost():
 
 
 def main():
+	make_preprocessed_data()
 	knn()
 
 
