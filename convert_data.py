@@ -22,6 +22,48 @@ for patient in patients:
 	X_perc = mat_contents['dataMatP']
 	y_perc = mat_contents['simVecP']
 
+	all = []
+	trial = []
+	# roll over every lead, create new matrix
+
+	for i in range(0, X_memory.shape[0]):
+		trial = []
+		for n in range(0, len(X_memory[i]) - dt_m + 1, dt_m):
+			single = X_memory[i][n:n + dt_m]
+			trial.append(single)
+		all.append(trial)
+	X_memory = np.asarray(all)
+	all = []
+	trial = []
+	# roll over every lead, create new matrix
+
+	for i in range(0, X_perc.shape[0]):
+		trial = []
+		for n in range(0, len(X_perc[i]) - dt_p + 1, dt_p):
+			single = X_perc[i][n:n + dt_p]
+			trial.append(single)
+		all.append(trial)
+	X_perc = np.asarray(all)
+
+	trials = X_memory.shape[0]
+	leads = X_memory.shape[1]
+
+	total_mem = [[] for _ in range(leads)]
+	for lead in range(0, leads):
+		for trial in range(0, trials):
+			entry = X_memory[trial][lead]
+			total_mem[lead].append(entry)
+
+	trials = X_perc.shape[0]
+	leads = X_perc.shape[1]
+
+	total_perc = [[] for _ in range(leads)]
+	for lead in range(0, leads):
+		for trial in range(0, trials):
+			entry = X_perc[trial][lead]
+			total_perc[lead].append(entry)
+	X_memory, X_perc = np.asarray(total_mem), np.asarray(total_perc)
+
 	with open('preprocessed/{}.pkl'.format(patient), 'wb') as fp:
 		pickle.dump([dt_p, dt_m, X_memory, y_memory, X_perc, y_perc], fp)
 

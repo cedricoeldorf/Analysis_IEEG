@@ -2,44 +2,6 @@ import numpy as np
 import pickle
 import pandas as pd
 
-######################################
-### Read in files
-######################################
-
-def extract_leads():
-	with open('preprocessed/X_memory.pkl', 'rb') as fp:
-		X_memory = pickle.load(fp)
-
-	with open('preprocessed/X_perc.pkl', 'rb') as fp:
-		X_perc = pickle.load(fp)
-
-	####################################
-	## Extract seperate leads
-	###################################
-
-	trials = X_memory.shape[0]
-	leads = X_memory.shape[1]
-	time_steps = X_memory.shape[2]
-
-	total_mem = [[] for _ in range(leads)]
-	for lead in range(0, leads):
-		for trial in range(0, trials):
-			entry = X_memory[trial][lead]
-			total_mem[lead].append(entry)
-
-	trials = X_perc.shape[0]
-	leads = X_perc.shape[1]
-	time_steps = X_perc.shape[2]
-
-	total_perc = [[] for _ in range(leads)]
-	for lead in range(0, leads):
-		for trial in range(0, trials):
-			entry = X_perc[trial][lead]
-			total_perc[lead].append(entry)
-
-	return np.asarray(total_mem), np.asarray(total_perc)
-
-
 ####################################
 ## Extract statistics for every lead and create AV table
 ####################################
