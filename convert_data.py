@@ -9,11 +9,10 @@ import numpy as np
 ## 3. Extract data into parent folder of where you cloned the gihub repo
 ## 4. Run this file, it will save new pickles of our data
 
-print("CURRENTLY ONLY USING SINGLE FILE")
-convert = input('Have you aleady performed the conversion? (y/n) ')
-if convert == 'n':
-	patient = input('which patient [01-16]')
-	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_FAC0{}.mat'.format(patient))
+patients = ['FAC001', 'FAC002', 'FAC004', 'FAC005', 'FAC006', 'FAC007', 'FAC008', 'FAC009', 'FAC010', 'FAC011', 'FAC012', 'FAC013', 'FAC014', 'FAC015', 'FAC016']
+for patient in patients:
+	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_{}.mat'.format(patient))
+
 	dt_p = mat_contents['NtimePointsP'][0][0]
 	dt_m = mat_contents['NtimePointsM'][0][0]
 
@@ -23,57 +22,8 @@ if convert == 'n':
 	X_perc = mat_contents['dataMatP']
 	y_perc = mat_contents['simVecP']
 
-	with open('preprocessed/X_memory.pkl', 'wb') as fp:
-		pickle.dump(X_memory, fp)
-	with open('preprocessed/y_memory.pkl', 'wb') as fp:
-		pickle.dump(y_memory, fp)
-	with open('preprocessed/X_perc.pkl', 'wb') as fp:
-		pickle.dump(X_perc, fp)
-	with open('preprocessed/y_perc.pkl', 'wb') as fp:
-		pickle.dump(y_perc, fp)
-if convert == 'y':
-	mat_contents = sio.loadmat('preprocessed/datathetaOscTLbyTimeV_FAC0{}.mat'.format(patient))
-	dt_p = mat_contents['NtimePointsP'][0][0]
-	dt_m = mat_contents['NtimePointsM'][0][0]
+	with open('preprocessed/{}.pkl'.format(patient), 'wb') as fp:
+		pickle.dump([dt_p, dt_m, X_memory, y_memory, X_perc, y_perc], fp)
 
 
-
-load_pickle = input('Would you like to load the pickles? (y/n)')
-if load_pickle == 'y':
-	with open('preprocessed/X_memory.pkl', 'rb') as fp:
-		X_memory = pickle.load(fp)
-	with open('preprocessed/y_memory.pkl', 'rb') as fp:
-		y_memory = pickle.load(fp)
-	with open('preprocessed/X_perc.pkl', 'rb') as fp:
-		X_perc = pickle.load(fp)
-	with open('preprocessed/y_perc.pkl', 'rb') as fp:
-		y_perc = pickle.load(fp)
-
-	seperate = input("Would you like to seperate the lead readings? (y/n)")
-	if seperate == 'y':
-		all = []
-		trial = []
-		# roll over every lead, create new matrix
-
-		for i in range(0, X_memory.shape[0]):
-			trial = []
-			for n in range(0, len(X_memory[i]) - dt_m + 1, dt_m):
-				single = X_memory[i][n:n + dt_m]
-				trial.append(single)
-			all.append(trial)
-		X_memory = np.asarray(all)
-		all = []
-		trial = []
-		# roll over every lead, create new matrix
-
-		for i in range(0, X_perc.shape[0]):
-			trial = []
-			for n in range(0, len(X_perc[i]) - dt_p + 1, dt_p):
-				single = X_perc[i][n:n + dt_p]
-				trial.append(single)
-			all.append(trial)
-		X_perc = np.asarray(all)
-		with open('preprocessed/X_memory.pkl', 'wb') as fp:
-			pickle.dump(X_memory, fp)
-		with open('preprocessed/X_perc.pkl', 'wb') as fp:
-			pickle.dump(X_perc, fp)
+# To read any patient: [dt_p, dt_m, X_memory, y_memory, X_perc, y_perc] = pickle.load(open('preprocessed/FAC001.pkl', 'rb'))
