@@ -3,19 +3,20 @@ import numpy as np
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import cross_val_score
-from extract_statistics import extract_leads, extract_basic
+from extract_statistics import extract_basic
 from sklearn.svm import SVC
 from sklearn.neural_network import MLPClassifier
-import xgboost as xgb
+# import xgboost as xgb
 from sklearn.feature_selection import RFE
 
 np.random.seed(0)
 
-X_mem, X_perc = extract_leads()
-y_mem = pickle.load(open('preprocessed/y_memory.pkl', 'rb'))
-y_perc = pickle.load(open('preprocessed/y_perc.pkl', 'rb'))
+dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/FAC004.pkl', 'rb'))
+
 y_mem = y_mem.T.flatten()
 y_perc = y_perc.T.flatten()
+
+print(dt_p, dt_m, X_mem.shape, y_mem.shape, X_perc.shape, y_perc.shape)
 
 av_mem, feature_names_mem = extract_basic(X_mem)
 av_perc, feature_names_perc = extract_basic(X_perc)
