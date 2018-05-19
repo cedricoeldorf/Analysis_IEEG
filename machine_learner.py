@@ -132,8 +132,18 @@ def main():
 	#knn()
 	from load_raw import load_raw
 	patient_data = load_raw('raw_FAC002')
-	# print(patient_data['eeg_p'].shape) 124 leads, 165 trials 4400 data points
+	'''
+			patient_data = contains all the data for patient X, shape = L leads by T trials by D data points
 
+			patient_data['eeg_m'] = all the memory eeg leads
+			patient_data['eeg_p'] = all the perc eeg leads
+
+			patient_data['simVecM'] # all the memory y values
+			patient_data['simVecP'] # all the perception y values
+		'''
+	# print(patient_data['eeg_p'].shape) 124 leads, 165 trials 4400 data points
+	from extract_statistics import create_vertex2vertex
+	create_vertex2vertex(patient_data['eeg_m'][0][0])
 	# from pandas import Series
 	# from matplotlib import pyplot
 	# from statsmodels.tsa.stattools import adfuller
