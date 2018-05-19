@@ -10,7 +10,8 @@ import xgboost as xgb
 from sklearn.feature_selection import RFE
 from collections import Counter
 import matplotlib.pyplot as plt
-import pandas as pd
+import pandas as pd, time
+from extract_statistics import *
 
 np.random.seed(0)
 patient = 'FAC001'
@@ -144,14 +145,17 @@ def main():
 			patient_data['simVecM'] # all the memory y values shape = T trials
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
-	from extract_statistics import create_vertex2vertex
-	# for i in range(1):
-	signal = patient_data['eeg_m'][1][12]
-	vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
-	# plt.plot(signal)
-	plt.plot(signal_smooth)
-	plt.plot(vertices, signal_smooth[vertices], 'ro')
-	plt.show()
+	t = time.time()
+	for trial in range(patient_data['eeg_m'].shape[1]):
+		for lead in range(patient_data['eeg_m'].shape[0]):
+			signal = patient_data['eeg_m'][lead][trial]
+			vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
+			cuvv_nm_std_cov(signal_smooth, vertices)
+	print(time.time()-t)
+			# plt.plot(signal)
+		# 	plt.plot(signal_smooth)
+		# 	plt.plot(vertices, signal_smooth[vertices], 'ro')
+		# plt.show()
 
 
 if __name__ == '__main__':

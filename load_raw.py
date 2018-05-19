@@ -17,7 +17,7 @@ def load_raw(patient_name):
 			patients.append(dir)
 	print('{} patient(s) detected'.format(len(patients)))
 
-	if not os.path.isdir(preprocessed_location + 'pickle/'):
+	if not os.path.exists(preprocessed_location + 'pickle/eegMem_{}.pkl'.format(patient_name)):
 		print('creating pickle for all patients...')
 		try:
 			os.mkdir(preprocessed_location + 'pickle/')
