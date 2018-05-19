@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.signal import savgol_filter
 
 
 ####################################
@@ -16,66 +17,91 @@ def extract_basic(X):
 
 		# get every lead for current trial
 		for j in range(0, X.shape[0]):
-			########
-			## mean
-			small.append(X[j][i].mean())
-			feature_names.append("mean_lead_" + str(j + 1))
-			########
-			## Max
-			small.append(X[j][i].max())
-			feature_names.append("max_lead_" + str(j + 1))
-			########
-			## Min
-			small.append(X[j][i].min())
-			feature_names.append("min_lead_" + str(j + 1))
-			########
-			## RMS
-			small.append(RMS(X[j][i]))
-			feature_names.append("rms_lead_" + str(j + 1))
-			########
-			## harmonic
-			small.append(harmonic(X[j][i]))
-			feature_names.append("harmonic_lead_" + str(j + 1))
-			########
-			## geometric
-			small.append(geometric(X[j][i]))
-			feature_names.append("geometric_lead_" + str(j + 1))
-			########
-			## generalized
-			small.append(generalized_mean(X[j][i], p))
-			feature_names.append("generalized_lead_" + str(j + 1))
+			signal = X[j][i]
+			vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
 
-			########
-			## Piecewise Aggregate Approximation
-			## (split series into parts and take mean of each0)
-			## This makes sense as the neurons should be firing in aggregating f,)
-			m1, m2, m3 = PAA(X)
-			small.append(m1)
-			feature_names.append("PAA1_" + str(j + 1))
-			small.append(m2)
-			feature_names.append("PAA2_" + str(j + 1))
-			small.append(m3)
-			feature_names.append("PAA3_" + str(j + 1))
+			# ########
+			# ## mean
+			# small.append(signal.mean())
+			# feature_names.append("mean_lead_" + str(j + 1))
+			# ########
+			# ## Max
+			# small.append(signal.max())
+			# feature_names.append("max_lead_" + str(j + 1))
+			# ########
+			# ## Min
+			# small.append(signal.min())
+			# feature_names.append("min_lead_" + str(j + 1))
+			# ########
+			# ## RMS
+			# small.append(RMS(signal))
+			# feature_names.append("rms_lead_" + str(j + 1))
+			# ########
+			# ## harmonic
+			# small.append(harmonic(signal))
+			# feature_names.append("harmonic_lead_" + str(j + 1))
+			# ########
+			# ## geometric
+			# small.append(geometric(signal))
+			# feature_names.append("geometric_lead_" + str(j + 1))
+			# ########
+			# ## generalized
+			# small.append(generalized_mean(signal, p))
+			# feature_names.append("generalized_lead_" + str(j + 1))
+			#
+			# ########
+			# ## Piecewise Aggregate Approximation
+			# ## (split series into parts and take mean of each0)
+			# ## This makes sense as the neurons should be firing in aggregating f,)
+			# m1, m2, m3 = PAA(X)
+			# small.append(m1)
+			# feature_names.append("PAA1_" + str(j + 1))
+			# small.append(m2)
+			# feature_names.append("PAA2_" + str(j + 1))
+			# small.append(m3)
+			# feature_names.append("PAA3_" + str(j + 1))
 
-		all.append(small)
+		# all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
 
-def create_vertex2vertex(signal):
-	from matplotlib import pyplot as plt
-	from scipy.signal import savgol_filter
-	window = 21
-	der2 = savgol_filter(signal, window_length=window, polyorder=2, deriv=2)
-	max_der2 = np.max(np.abs(der2))
-	large = np.where(np.abs(der2) > max_der2 / 2)[0]
-	gaps = np.diff(large) > window
-	begins = np.insert(large[1:][gaps], 0, large[0])
-	ends = np.append(large[:-1][gaps], large[-1])
-	changes = ((begins + ends) / 2).astype(np.int)
-	plt.plot(signal)
-	plt.plot(changes, signal[changes], 'ro')
-	plt.show()
+def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
+	"""Finds peaks and valley in `data` which are of `spacing` width.
+	:param polyorder: degree of polynomial to fit
+	:param window: size of windows for smoothing
+	:param smooth: whether to smooth the signal or not
+	:param data: values
+	:param spacing: minimum spacing to the next peak (should be 1 or more)
+	:return: list of indices that are peaks and valleys
+	"""
+	if smooth:
+		data = savgol_filter(data, window, polyorder)
+	len = data.size
+	x = np.zeros(len + 2 * spacing)
+	x[:spacing] = data[0] - 1.e-6
+	x[-spacing:] = data[-1] - 1.e-6
+	x[spacing:spacing + len] = data
+	peak_candidate = np.zeros(len)
+	valley_candidate = np.zeros(len)
+	peak_candidate[:] = True
+	valley_candidate[:] = True
+	for s in range(spacing):
+		start = spacing - s - 1
+		h_b = x[start: start + len]  # before
+		start = spacing
+		h_c = x[start: start + len]  # central
+		start = spacing + s + 1
+		h_a = x[start: start + len]  # after
+		peak_candidate = np.logical_and(peak_candidate, np.logical_and(h_c > h_b, h_c > h_a))
+		valley_candidate = np.logical_and(valley_candidate, np.logical_and(h_c < h_b, h_c < h_a))
+
+	ind_peak = np.argwhere(peak_candidate)
+	ind_valley = np.argwhere(valley_candidate)
+	ind_peak = ind_peak.reshape(ind_peak.size).tolist()
+	ind_valley = ind_valley.reshape(ind_valley.size).tolist()
+	ind = set(ind_peak+ind_valley)
+	return list(ind), data
 
 
 def RMS(lead):
