@@ -39,7 +39,7 @@ if ans == 'y':
 		with open ('FAC002 raw\pickles\eeg_mem_fac2_{}.pkl'.format(i+1), 'rb') as fp:
 			eeg_mem.append(pickle.load(fp))
 
-
+eeg_mem = patient_data['eeg_m']
 for i in range(len(eeg_mem[0])):
 	plt.title("Lead {}".format(1))
 	plt.plot(eeg_mem[0][i])
@@ -97,7 +97,7 @@ dft_4(differencing(eeg_mem[1][1]), 4400, 1)
 dft_4(differencing(eeg_mem[1][2]), 4400, 1)
 
 
-leads = 2
+lead_name = 2
 from_s = 0
 to_s = 12000
 

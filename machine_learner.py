@@ -10,6 +10,8 @@ import xgboost as xgb
 from sklearn.feature_selection import RFE
 from collections import Counter
 import matplotlib.pyplot as plt
+import pandas as pd
+
 
 np.random.seed(0)
 patient = 'FAC001'
@@ -17,7 +19,7 @@ patient = 'FAC001'
 
 def make_preprocessed_data():
 	global av_mem, feature_names_mem, y_mem, feature_names_perc, av_perc, y_perc
-	dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/FAC001.pkl'.format(patient), 'rb'))
+	dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/{}.pkl'.format(patient), 'rb'))
 
 	y_mem = y_mem.T.flatten()
 	y_perc = y_perc.T.flatten()
@@ -126,14 +128,35 @@ def xgboost():
 		print('perc:', cross_val_score(gbm, av_perc, y_perc, cv=3))
 
 def main():
-	make_preprocessed_data()
+	# make_preprocessed_data()
 	#knn()
+	from load_raw import load_raw
+	patient_data = load_raw('raw_FAC002')
+	# print(patient_data['eeg_p'].shape) 124 leads, 165 trials 4400 data points
 
+	# from pandas import Series
+	# from matplotlib import pyplot
+	# from statsmodels.tsa.stattools import adfuller
+	# max = -1000000
+	# max_res = (0,0,0)
+	# cnt = 0
+	# for trial in range(patient_data['eeg_m'].shape[1]):
+	# 	for lead in range(patient_data['eeg_m'].shape[0]):
+	# 		# series = Series(patient_data['eeg_p'][lead][trial])
+	# 		# X = series.values
+	# 		(result) = adfuller(patient_data['eeg_m'][lead][trial])
+	# 		print('p-value: %f' % result[1])
+	# 		if result[0] > max:
+	# 			max = result[0]
+	# 			max_res = (result, trial, lead)
+	# print(max_res[0])
+	# print(max_res[1])
+	# print(max_res[2])
 
 # random_forest()
 # svm()
 # mlp()
-	xgboost()
+# 	xgboost()
 
 if __name__ == '__main__':
 	main()

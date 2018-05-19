@@ -1,7 +1,4 @@
 import numpy as np
-import pickle
-import pandas as pd
-
 
 ####################################
 ## Extract statistics for every lead and create AV table
@@ -9,10 +6,8 @@ import pandas as pd
 
 def extract_basic(X):
 	print("extracting basics")
-
 	all = []  # will be the whole dataset
 	p = 50  # for generalized mean
-
 	# Iterate over every trial
 	for i in range(0, X.shape[1]):
 		small = []  # this is temporary list to add to new data set after every iteration
