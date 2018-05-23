@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.signal import savgol_filter
 from scipy.stats import variation
-
+from scipy.ndimage.interpolation import shift
 
 
 ####################################
@@ -81,6 +81,7 @@ def cuvv_nm_std_cov(signal, vertices): # mean and S.D. coefficient of variation 
 
 
 def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
+	## Input: Single signal array
 	"""Finds peaks and valley in `data` which are of `spacing` width.
 	:param polyorder: degree of polynomial to fit
 	:param window: size of windows for smoothing
@@ -160,3 +161,32 @@ def PAA(X, split=3):
 	m2 = m2.mean()
 	m3 = m3.mean()
 	return m1, m2, m3
+
+
+def amplitude_features(signal):
+
+	"""
+	Extracts the following form a single signal:
+	____________________________________________
+	S.D. of raw amplitudes
+	skew of raw amplitudes, mean ((X i -  Xmean)3
+	mean of vertex-to-vertex a amplitudes
+	S.D. of vertex-to-vertex amplitude
+	coefficient of variation of vertex-to-vertex amplitude
+	mean of absolute slopes of raw amplitudes, mean (abs(dx/dt))
+	"""
+
+	mean = signal.mean()
+	amplitude = signal - mean
+	SD_amplitude = amplitude.std()
+	SKEW_amplitude = ((amplitude - mean)**3).mean()
+	ind, vertices = create_vertex2vertex(signal)
+	vertices = signal[ind]
+	vertices_lag = shift(vertices, -1, cval=0)
+	MEAN_v2v = (vertices - vertices_lag).mean()
+	SD_v2v = (vertices - vertices_lag).std()
+	CV_v2v = SD_v2v/MEAN_v2v
+
+	slope_mean = abs(vertices[:-1]/vertices_lag[:-1]).mean()
+
+	return SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean
