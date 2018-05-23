@@ -145,13 +145,15 @@ def main():
 			patient_data['simVecM'] # all the memory y values shape = T trials
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
+	extract_basic(patient_data['eeg_m'])
+
 	t = time.time()
-	for trial in range(patient_data['eeg_m'].shape[1]):
-		for lead in range(patient_data['eeg_m'].shape[0]):
-			signal = patient_data['eeg_m'][lead][trial]
-			vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
-			cuvv_nm_std_cov(signal_smooth, vertices)
-	print(time.time()-t)
+	# for trial in range(patient_data['eeg_m'].shape[1]):
+	# 	for lead in range(patient_data['eeg_m'].shape[0]):
+	# 		signal = patient_data['eeg_m'][lead][trial]
+	# 		vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
+	# 		cuvv_nm_std_cov(signal_smooth, vertices)
+	# print(time.time()-t)
 			# plt.plot(signal)
 		# 	plt.plot(signal_smooth)
 		# 	plt.plot(vertices, signal_smooth[vertices], 'ro')
