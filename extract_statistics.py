@@ -303,3 +303,31 @@ def amplitude_features(signal):
 	slope_mean = abs(vertices[:-1]/vertices_lag[:-1]).mean()
 
 	return SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean
+
+def absolute_slopes_features(signal):
+        """
+	Extracts the following form a single signal:
+	____________________________________________
+	7. S.D. of absolute slopes of raw amplitudes
+	8. coefficient of variation of absolute slopes of raw amplitudes 
+	9. mean of vertex-to-vertex absolute slopes 
+	10. S.D. of vertex-to-vertex absolute slopes
+	11. coefficient of variation of vertex-to-vertex absolute slopes
+	12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
+	"""
+        mean = signal.mean()
+        amplitude = signal - mean
+        SD_amplitude = amplitude.std()
+        ind, vertices = create_vertex2vertex(signal)
+	vertices = signal[ind]
+	vertices_lag = shift(vertices, -1, cval=0)
+        slope_amplitude = abs(vertices[:-1]/vertices_lag[:-1])
+        slope_MEAN = slope_amplitude.mean()
+        slope_SD = slope_amplitude.std()
+        CV_slope_amplitude = slope_SD/slope_MEAN
+        slope_v2v = abs(vertices/vertices_lag)
+        MEAN_v2v_slope = slope_v2v.mean()
+        SD_v2v_slope = slope_v2v.std()
+        CV_v2v_slope = SD_v2v/MEAN_v2v
+
+        return slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope 
