@@ -121,6 +121,119 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 	return ind, data
 
 
+# Feature #27
+def crest(signal):
+    """ Feature #27
+
+        Returns: Maximum peak-to-peak amplitude / AMSD
+                 (So called crest factor)
+    """
+    # Calculate RMS
+    rms = RMS(signal)
+    # Get max
+    max = np.max(signal)
+    # Return ratio
+    return max/rms
+
+
+# Feature #28
+def RAPN(signal):
+    """ Feature #28
+
+        Returns: Mean of positive amplitudes / mean of negative amplitudes
+    """
+    # Get max indices
+    # max_indices = peakutils.indexes(signal)
+    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
+    # Get min indices
+    # min_indices = peakutils.indexes(signal*(-1))
+    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
+    # Mean of positive amplitudes
+    mean_of_pos = np.mean([signal[i] for i in max_indices])
+    # Mean of negative amplitudes
+    mean_of_neg = np.mean([signal[i] for i in min_indices])
+    # return ratio
+    return mean_of_pos / mean_of_neg
+
+
+# Feature #29
+def RTRF(signal):
+    """ Feature #29
+
+        Returns: Mean rise time / mean fall time
+    """
+    # Get max indices
+    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
+    # Get min indices
+    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
+    # Extract rise times and fall times
+    rise_time = []
+    fall_time = []
+    if max_indices[0] > min_indices[0]:
+        rise_time.append([max_indices[i] - min_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
+        fall_time.append([min_indices[i+1] - max_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
+    else:
+        rise_time.append([max_indices[i+1] - min_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
+        fall_time.append([min_indices[i] - max_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
+    # Mean of rise and fall time
+    rise_mean = np.sum(rise_time) / len(rise_time[0])
+    fall_mean = np.sum(fall_time) / len(fall_time[0])
+    # Return ratio
+    return rise_mean / fall_mean
+
+def RTPN(signal):
+    """ Feature # 30
+
+        Returns: Mean period of crossings of the mean positive amplitude /
+                 mean period of crossings of the mean negative amplitude
+    """
+    # Get max indices
+    # max_indices = peakutils.indexes(signal)
+    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
+    # Get min indices
+    # min_indices = peakutils.indexes(signal*(-1))
+    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
+    # Mean of positive amplitudes
+    mean_of_pos = np.mean([signal[i] for i in max_indices])
+    # Mean of negative amplitudes
+    mean_of_neg = np.mean([signal[i] for i in min_indices])
+    all_mean_pos_crossing = []
+    all_mean_neg_crossing = []
+    pos_mean_cross_up = False
+    pos_mean_cross_down = False
+    neg_mean_cross_up = False
+    neg_mean_cross_down = False
+    for i in range(len(signal)-1):
+
+        # Cross positive mean up
+        if signal[i+1] > mean_of_pos and signal[i] < mean_of_pos:
+            pos_mean_cross_up = i
+        # Cross positive mean down
+        if signal[i+1] < mean_of_pos and signal[i] > mean_of_pos:
+            pos_mean_cross_down = i
+        # Append to positive crossing list
+        if not isinstance(pos_mean_cross_up, bool):
+            all_mean_pos_crossing.append(pos_mean_cross_down - pos_mean_cross_up)
+            pos_mean_cross_up = False
+            pos_mean_cross_down = False
+        # Cross negative mean down
+        if signal[i+1] < mean_of_neg and signal[i] > mean_of_neg:
+            neg_mean_cross_down = i
+        # Cross negative mean up
+        if signal[i+1] > mean_of_neg and signal[i] < mean_of_neg:
+            neg_mean_cross_up = i
+        # Append to negative crossing list
+        if not isinstance(neg_mean_cross_down, bool):
+            all_mean_neg_crossing.append(neg_mean_cross_up - neg_mean_cross_down)
+            neg_mean_cross_up = False
+            neg_mean_cross_down = False
+    # Get means
+    mean_pos_crossing = np.mean(all_mean_pos_crossing)
+    mean_neg_crossing = np.mean(all_mean_neg_crossing)
+    # Return ratio
+    return mean_pos_crossing / mean_neg_crossing
+
+
 def RMS(lead):
 	sum = 0
 	for i in range(len(lead)):
