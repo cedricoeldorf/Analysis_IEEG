@@ -22,46 +22,46 @@ def extract_basic(X):
 			signal = X[j][i]
 			vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
 
-			# ########
-			# ## mean
-			# small.append(signal.mean())
-			# feature_names.append("mean_lead_" + str(j + 1))
-			# ########
-			# ## Max
-			# small.append(signal.max())
-			# feature_names.append("max_lead_" + str(j + 1))
-			# ########
-			# ## Min
-			# small.append(signal.min())
-			# feature_names.append("min_lead_" + str(j + 1))
-			# ########
-			# ## RMS
-			# small.append(RMS(signal))
-			# feature_names.append("rms_lead_" + str(j + 1))
-			# ########
-			# ## harmonic
-			# small.append(harmonic(signal))
-			# feature_names.append("harmonic_lead_" + str(j + 1))
-			# ########
-			# ## geometric
-			# small.append(geometric(signal))
-			# feature_names.append("geometric_lead_" + str(j + 1))
-			# ########
-			# ## generalized
-			# small.append(generalized_mean(signal, p))
-			# feature_names.append("generalized_lead_" + str(j + 1))
-			#
-			# ########
-			# ## Piecewise Aggregate Approximation
-			# ## (split series into parts and take mean of each0)
-			# ## This makes sense as the neurons should be firing in aggregating f,)
-			# m1, m2, m3 = PAA(X)
-			# small.append(m1)
-			# feature_names.append("PAA1_" + str(j + 1))
-			# small.append(m2)
-			# feature_names.append("PAA2_" + str(j + 1))
-			# small.append(m3)
-			# feature_names.append("PAA3_" + str(j + 1))
+			########
+			## mean
+			small.append(signal.mean())
+			feature_names.append("mean_lead_" + str(j + 1))
+			########
+			## Max
+			small.append(signal.max())
+			feature_names.append("max_lead_" + str(j + 1))
+			########
+			## Min
+			small.append(signal.min())
+			feature_names.append("min_lead_" + str(j + 1))
+			########
+			## RMS
+			small.append(RMS(signal))
+			feature_names.append("rms_lead_" + str(j + 1))
+			########
+			## harmonic
+			small.append(harmonic(signal))
+			feature_names.append("harmonic_lead_" + str(j + 1))
+			########
+			## geometric
+			small.append(geometric(signal))
+			feature_names.append("geometric_lead_" + str(j + 1))
+			########
+			## generalized
+			small.append(generalized_mean(signal, p))
+			feature_names.append("generalized_lead_" + str(j + 1))
+
+			########
+			## Piecewise Aggregate Approximation
+			## (split series into parts and take mean of each0)
+			## This makes sense as the neurons should be firing in aggregating f,)
+			m1, m2, m3 = PAA(X)
+			small.append(m1)
+			feature_names.append("PAA1_" + str(j + 1))
+			small.append(m2)
+			feature_names.append("PAA2_" + str(j + 1))
+			small.append(m3)
+			feature_names.append("PAA3_" + str(j + 1))
 
 		# all.append(small)
 	all = np.asarray(all)
