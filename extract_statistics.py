@@ -120,6 +120,29 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 	ind.sort()
 	return ind, data
 
+#feature 21-26
+def Amplitude(signal):
+
+    para1 = round(0.5*len(signal))    # to compute the amplitude 50% -100% frequency band
+    para2 = round(0.25*len(signal))  # 25% - 50%
+    para3 = round(0.12*len(signal))  # 12% - 25%
+    para4 = round(0.06*len(signal))  # 6% - 12%
+    para5 = round(0.03*len(signal))  
+
+    am1 = signal[para1:]
+    Amplitude1 = (max(am1) - min(am1))/2
+    am2 = signal[para2:para1]
+    Amplitude2 = (max(am2) - min(am2))/2
+    am3 = signal[para3:para2]
+    Amplitude3 = (max(am3) - min(am3))/2
+    am4 = signal[para4:para3]
+    Amplitude4 =(max(am4) - min(am4)) /2
+    am5 = signal[para5:para4]
+    Amplitude5 = (max(am5) - min(am5)) /2
+    am6 = signal[0:para5]
+    Amplitude6 = (max(am6) - min(am6))/2
+    return A1, A2, A3, A4, A5, A6
+
 
 # Feature #27
 def crest(signal):
