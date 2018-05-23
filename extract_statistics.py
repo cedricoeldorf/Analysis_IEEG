@@ -141,7 +141,7 @@ def Amplitude(signal):
     Amplitude5 = (max(am5) - min(am5)) /2
     am6 = signal[0:para5]
     Amplitude6 = (max(am6) - min(am6))/2
-    return A1, A2, A3, A4, A5, A6
+    return Amplitude1, Amplitude2, Amplitude3, Amplitude4, Amplitude5, Amplitude6
 
 
 # Feature #27
