@@ -21,6 +21,8 @@ def extract_basic(X):
 		for j in range(0, X.shape[0]):
 			signal = X[j][i]
 			vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
+			print(vertices)
+			print(smoothed_signal[vertices])
 
 			########
 			## mean

@@ -8,7 +8,6 @@ import os
 
 def load_raw(patient_name):
 	preprocessed_location = 'preprocessed/'
-
 	# find all the patients that have to be read in...
 	preprocessed_dir = next(os.walk(preprocessed_location))[1]
 	patients = []
@@ -17,7 +16,7 @@ def load_raw(patient_name):
 			patients.append(dir)
 	print('{} patient(s) detected'.format(len(patients)))
 
-	if not os.path.exists(preprocessed_location + 'pickle/eegMem_{}.pkl'.format(patient_name)):
+	if len(patients) != 0 and not os.path.exists(preprocessed_location + 'pickle/eegMem_{}.pkl'.format(patient_name)):
 		print('creating pickle for all patients...')
 		try:
 			os.mkdir(preprocessed_location + 'pickle/')
@@ -53,7 +52,7 @@ def load_raw(patient_name):
 				if '_chan_' in l:  # read in lead
 					mat_contents = sio.loadmat(perc_dir + l)
 					eeg = mat_contents['eeg']
-					print(patient, l, eeg.shape)
+					# print(patient, l, eeg.shape)
 					if lead_name not in patient_data:
 						patient_data[lead_name] = []
 					patient_data[lead_name].append(eeg)
