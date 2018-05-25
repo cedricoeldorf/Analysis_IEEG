@@ -401,11 +401,8 @@ ____________________________________________
 11. coefficient of variation of vertex-to-vertex absolute slopes
 12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
 """
-	mean = signal.mean()
-	amplitude = signal - mean
-	SD_amplitude = amplitude.std()
 	ind, vertices = create_vertex2vertex(signal)
-	vertices = signal[ind]
+	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=0)
 	slope_amplitude = abs(vertices[:-1] / vertices_lag[:-1])
 	slope_MEAN = slope_amplitude.mean()
