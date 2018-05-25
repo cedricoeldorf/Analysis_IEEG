@@ -20,7 +20,7 @@ def extract_basic(X):
 		# get every lead for current trial
 		for j in range(0, X.shape[0]):
 			signal = X[j][i]
-			vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
+			# vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
 			print(smoothed_signal[vertices]) the corresponding value for these positions
@@ -66,18 +66,79 @@ def extract_basic(X):
 			small.append(m3)
 			feature_names.append("PAA3_" + str(j + 1))
 
-		# all.append(small)
+	# all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
 
-def cuvv_nm_std_cov(signal, vertices): # mean and S.D. coefficient of variation of curvatures at vertices
+def curvature_period_features(signal, AMSD):  # mean and S.D. coefficient of variation of curvatures at vertices
+	"""
+			mean of curvatures (d2x/dt2) at vertices
+			S.D. of curvatures at vertices
+			coefficient of variation of curvatures at vertices
+			vertex counts/sec
+			S.D. of vertex-to-vertex period
+			coefficient of variation of vertex-to-vertex period
+			count of mean crossings/sec (hysteresis = 25% of AMSD)
+	"""
+	vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
+
 	dx_dt = np.gradient(vertices)
-	dy_dt = np.gradient(signal[vertices])
+	dy_dt = np.gradient(signal_smooth[vertices])
 	d2x_dt2 = np.gradient(dx_dt)
 	d2y_dt2 = np.gradient(dy_dt)
 	curvature = np.abs(d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (dx_dt * dx_dt + dy_dt * dy_dt) ** 1.5
-	return np.mean(curvature), np.std(curvature), variation(curvature)
+	seconds = len(signal_smooth) / 2000.0  # 2000hz sample rate and signal is 4400 samples
+	vertices_per_second = len(signal_smooth[vertices] / seconds)
+	selected_period = np.array(vertices[::2])
+	vertices_period = np.subtract(selected_period[1::], selected_period[:-1:])
+	hysteresis = abs(0.25 * AMSD)
+	mean = signal_smooth.mean()
+	shifted_signal = signal_smooth - mean
+	hysterisized_signal = hyst(shifted_signal, -hysteresis, hysteresis)
+	zero_crossing_count = (np.diff(hysterisized_signal) != 0).sum()
+	CTMXMN = zero_crossing_count / seconds
+
+	return curvature.mean(), \
+		   curvature.std(), \
+		   variation(curvature), \
+		   vertices_per_second, \
+		   vertices_period.std(), \
+		   variation(vertices_period), \
+		   CTMXMN
+
+
+def hyst(x, th_lo, th_hi, initial=False):
+	"""
+	x : Numpy Array
+		Series to apply hysteresis to.
+	th_lo : float or int
+		Below this threshold the value of hyst will be False (0).
+	th_hi : float or int
+		Above this threshold the value of hyst will be True (1).
+	"""
+
+	if th_lo > th_hi:  # If thresholds are reversed, x must be reversed as well
+		x = x[::-1]
+		th_lo, th_hi = th_hi, th_lo
+		rev = True
+	else:
+		rev = False
+
+	hi = x >= th_hi
+	lo_or_hi = (x <= th_lo) | hi
+
+	ind = np.nonzero(lo_or_hi)[0]
+	if not ind.size:  # prevent index error if ind is empty
+		x_hyst = np.zeros_like(x, dtype=bool) | initial
+	else:
+		cnt = np.cumsum(lo_or_hi)  # from 0 to len(x)
+		x_hyst = np.where(cnt, hi[ind[cnt - 1]], initial)
+
+	if rev:
+		x_hyst = x_hyst[::-1]
+
+	return x_hyst
 
 
 def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
@@ -115,7 +176,7 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 	ind_valley = np.argwhere(valley_candidate)
 	ind_peak = ind_peak.reshape(ind_peak.size).tolist()
 	ind_valley = ind_valley.reshape(ind_valley.size).tolist()
-	ind = set(ind_peak+ind_valley)
+	ind = set(ind_peak + ind_valley)
 	ind = list(ind)
 	ind.sort()
 	return ind, data
@@ -123,115 +184,116 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 
 # Feature #27
 def crest(signal):
-    """ Feature #27
+	""" Feature #27
 
-        Returns: Maximum peak-to-peak amplitude / AMSD
-                 (So called crest factor)
-    """
-    # Calculate RMS
-    rms = RMS(signal)
-    # Get max
-    max = np.max(signal)
-    # Return ratio
-    return max/rms
+		Returns: Maximum peak-to-peak amplitude / AMSD
+				 (So called crest factor)
+	"""
+	# Calculate RMS
+	rms = RMS(signal)
+	# Get max
+	max = np.max(signal)
+	# Return ratio
+	return max / rms
 
 
 # Feature #28
 def RAPN(signal):
-    """ Feature #28
+	""" Feature #28
 
-        Returns: Mean of positive amplitudes / mean of negative amplitudes
-    """
-    # Get max indices
-    # max_indices = peakutils.indexes(signal)
-    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
-    # Get min indices
-    # min_indices = peakutils.indexes(signal*(-1))
-    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
-    # Mean of positive amplitudes
-    mean_of_pos = np.mean([signal[i] for i in max_indices])
-    # Mean of negative amplitudes
-    mean_of_neg = np.mean([signal[i] for i in min_indices])
-    # return ratio
-    return mean_of_pos / mean_of_neg
+		Returns: Mean of positive amplitudes / mean of negative amplitudes
+	"""
+	# Get max indices
+	# max_indices = peakutils.indexes(signal)
+	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	# Get min indices
+	# min_indices = peakutils.indexes(signal*(-1))
+	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	# Mean of positive amplitudes
+	mean_of_pos = np.mean([signal[i] for i in max_indices])
+	# Mean of negative amplitudes
+	mean_of_neg = np.mean([signal[i] for i in min_indices])
+	# return ratio
+	return mean_of_pos / mean_of_neg
 
 
 # Feature #29
 def RTRF(signal):
-    """ Feature #29
+	""" Feature #29
 
-        Returns: Mean rise time / mean fall time
-    """
-    # Get max indices
-    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
-    # Get min indices
-    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
-    # Extract rise times and fall times
-    rise_time = []
-    fall_time = []
-    if max_indices[0] > min_indices[0]:
-        rise_time.append([max_indices[i] - min_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
-        fall_time.append([min_indices[i+1] - max_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
-    else:
-        rise_time.append([max_indices[i+1] - min_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
-        fall_time.append([min_indices[i] - max_indices[i] for i in range(min(len(max_indices), len(min_indices))-1)])
-    # Mean of rise and fall time
-    rise_mean = np.sum(rise_time) / len(rise_time[0])
-    fall_mean = np.sum(fall_time) / len(fall_time[0])
-    # Return ratio
-    return rise_mean / fall_mean
+		Returns: Mean rise time / mean fall time
+	"""
+	# Get max indices
+	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	# Get min indices
+	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	# Extract rise times and fall times
+	rise_time = []
+	fall_time = []
+	if max_indices[0] > min_indices[0]:
+		rise_time.append([max_indices[i] - min_indices[i] for i in range(min(len(max_indices), len(min_indices)) - 1)])
+		fall_time.append([min_indices[i + 1] - max_indices[i] for i in range(min(len(max_indices), len(min_indices)) - 1)])
+	else:
+		rise_time.append([max_indices[i + 1] - min_indices[i] for i in range(min(len(max_indices), len(min_indices)) - 1)])
+		fall_time.append([min_indices[i] - max_indices[i] for i in range(min(len(max_indices), len(min_indices)) - 1)])
+	# Mean of rise and fall time
+	rise_mean = np.sum(rise_time) / len(rise_time[0])
+	fall_mean = np.sum(fall_time) / len(fall_time[0])
+	# Return ratio
+	return rise_mean / fall_mean
+
 
 def RTPN(signal):
-    """ Feature # 30
+	""" Feature # 30
 
-        Returns: Mean period of crossings of the mean positive amplitude /
-                 mean period of crossings of the mean negative amplitude
-    """
-    # Get max indices
-    # max_indices = peakutils.indexes(signal)
-    max_indices = peakutils.indexes(signal, thres=0.02/max(signal), min_dist=0.1)
-    # Get min indices
-    # min_indices = peakutils.indexes(signal*(-1))
-    min_indices = peakutils.indexes(signal*(-1), thres=0.02/max(signal*(-1)), min_dist=0.1)
-    # Mean of positive amplitudes
-    mean_of_pos = np.mean([signal[i] for i in max_indices])
-    # Mean of negative amplitudes
-    mean_of_neg = np.mean([signal[i] for i in min_indices])
-    all_mean_pos_crossing = []
-    all_mean_neg_crossing = []
-    pos_mean_cross_up = False
-    pos_mean_cross_down = False
-    neg_mean_cross_up = False
-    neg_mean_cross_down = False
-    for i in range(len(signal)-1):
+		Returns: Mean period of crossings of the mean positive amplitude /
+				 mean period of crossings of the mean negative amplitude
+	"""
+	# Get max indices
+	# max_indices = peakutils.indexes(signal)
+	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	# Get min indices
+	# min_indices = peakutils.indexes(signal*(-1))
+	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	# Mean of positive amplitudes
+	mean_of_pos = np.mean([signal[i] for i in max_indices])
+	# Mean of negative amplitudes
+	mean_of_neg = np.mean([signal[i] for i in min_indices])
+	all_mean_pos_crossing = []
+	all_mean_neg_crossing = []
+	pos_mean_cross_up = False
+	pos_mean_cross_down = False
+	neg_mean_cross_up = False
+	neg_mean_cross_down = False
+	for i in range(len(signal) - 1):
 
-        # Cross positive mean up
-        if signal[i+1] > mean_of_pos and signal[i] < mean_of_pos:
-            pos_mean_cross_up = i
-        # Cross positive mean down
-        if signal[i+1] < mean_of_pos and signal[i] > mean_of_pos:
-            pos_mean_cross_down = i
-        # Append to positive crossing list
-        if not isinstance(pos_mean_cross_up, bool):
-            all_mean_pos_crossing.append(pos_mean_cross_down - pos_mean_cross_up)
-            pos_mean_cross_up = False
-            pos_mean_cross_down = False
-        # Cross negative mean down
-        if signal[i+1] < mean_of_neg and signal[i] > mean_of_neg:
-            neg_mean_cross_down = i
-        # Cross negative mean up
-        if signal[i+1] > mean_of_neg and signal[i] < mean_of_neg:
-            neg_mean_cross_up = i
-        # Append to negative crossing list
-        if not isinstance(neg_mean_cross_down, bool):
-            all_mean_neg_crossing.append(neg_mean_cross_up - neg_mean_cross_down)
-            neg_mean_cross_up = False
-            neg_mean_cross_down = False
-    # Get means
-    mean_pos_crossing = np.mean(all_mean_pos_crossing)
-    mean_neg_crossing = np.mean(all_mean_neg_crossing)
-    # Return ratio
-    return mean_pos_crossing / mean_neg_crossing
+		# Cross positive mean up
+		if signal[i + 1] > mean_of_pos and signal[i] < mean_of_pos:
+			pos_mean_cross_up = i
+		# Cross positive mean down
+		if signal[i + 1] < mean_of_pos and signal[i] > mean_of_pos:
+			pos_mean_cross_down = i
+		# Append to positive crossing list
+		if not isinstance(pos_mean_cross_up, bool):
+			all_mean_pos_crossing.append(pos_mean_cross_down - pos_mean_cross_up)
+			pos_mean_cross_up = False
+			pos_mean_cross_down = False
+		# Cross negative mean down
+		if signal[i + 1] < mean_of_neg and signal[i] > mean_of_neg:
+			neg_mean_cross_down = i
+		# Cross negative mean up
+		if signal[i + 1] > mean_of_neg and signal[i] < mean_of_neg:
+			neg_mean_cross_up = i
+		# Append to negative crossing list
+		if not isinstance(neg_mean_cross_down, bool):
+			all_mean_neg_crossing.append(neg_mean_cross_up - neg_mean_cross_down)
+			neg_mean_cross_up = False
+			neg_mean_cross_down = False
+	# Get means
+	mean_pos_crossing = np.mean(all_mean_pos_crossing)
+	mean_neg_crossing = np.mean(all_mean_neg_crossing)
+	# Return ratio
+	return mean_pos_crossing / mean_neg_crossing
 
 
 def RMS(lead):
@@ -263,7 +325,7 @@ def generalized_mean(lead, p):
 	return abs(sum) ** (1 / p)
 
 
-## Piecewise Aggregate Approximation
+#  Piecewise Aggregate Approximation
 def PAA(X, split=3):
 	length = int(len(X) / split)
 	m1 = X[:length]
@@ -277,7 +339,6 @@ def PAA(X, split=3):
 
 
 def amplitude_features(signal):
-
 	"""
 	Extracts the following form a single signal:
 	____________________________________________
@@ -292,14 +353,14 @@ def amplitude_features(signal):
 	mean = signal.mean()
 	amplitude = signal - mean
 	SD_amplitude = amplitude.std()
-	SKEW_amplitude = ((amplitude - mean)**3).mean()
+	SKEW_amplitude = ((amplitude - mean) ** 3).mean()
 	ind, vertices = create_vertex2vertex(signal)
 	vertices = signal[ind]
 	vertices_lag = shift(vertices, -1, cval=0)
 	MEAN_v2v = (vertices - vertices_lag).mean()
 	SD_v2v = (vertices - vertices_lag).std()
-	CV_v2v = SD_v2v/MEAN_v2v
+	CV_v2v = SD_v2v / MEAN_v2v
 
-	slope_mean = abs(vertices[:-1]/vertices_lag[:-1]).mean()
+	slope_mean = abs(vertices[:-1] / vertices_lag[:-1]).mean()
 
 	return SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean
