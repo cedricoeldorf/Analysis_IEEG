@@ -181,6 +181,29 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 	ind.sort()
 	return ind, data
 
+#feature 21-26
+def Amplitude(signal):
+
+    para1 = round(0.5*len(signal))    # to compute the amplitude 50% -100% frequency band
+    para2 = round(0.25*len(signal))  # 25% - 50%
+    para3 = round(0.12*len(signal))  # 12% - 25%
+    para4 = round(0.06*len(signal))  # 6% - 12%
+    para5 = round(0.03*len(signal))  
+
+    am1 = signal[para1:]
+    Amplitude1 = (max(am1) - min(am1))/2
+    am2 = signal[para2:para1]
+    Amplitude2 = (max(am2) - min(am2))/2
+    am3 = signal[para3:para2]
+    Amplitude3 = (max(am3) - min(am3))/2
+    am4 = signal[para4:para3]
+    Amplitude4 =(max(am4) - min(am4)) /2
+    am5 = signal[para5:para4]
+    Amplitude5 = (max(am5) - min(am5)) /2
+    am6 = signal[0:para5]
+    Amplitude6 = (max(am6) - min(am6))/2
+    return Amplitude1, Amplitude2, Amplitude3, Amplitude4, Amplitude5, Amplitude6
+
 
 # Feature #27
 def crest(signal):
@@ -364,3 +387,31 @@ def amplitude_features(signal):
 	slope_mean = abs(vertices[:-1] / vertices_lag[:-1]).mean()
 
 	return SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean
+
+def absolute_slopes_features(signal):
+        """
+	Extracts the following form a single signal:
+	____________________________________________
+	7. S.D. of absolute slopes of raw amplitudes
+	8. coefficient of variation of absolute slopes of raw amplitudes 
+	9. mean of vertex-to-vertex absolute slopes 
+	10. S.D. of vertex-to-vertex absolute slopes
+	11. coefficient of variation of vertex-to-vertex absolute slopes
+	12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
+	"""
+        mean = signal.mean()
+        amplitude = signal - mean
+        SD_amplitude = amplitude.std()
+        ind, vertices = create_vertex2vertex(signal)
+	vertices = signal[ind]
+	vertices_lag = shift(vertices, -1, cval=0)
+        slope_amplitude = abs(vertices[:-1]/vertices_lag[:-1])
+        slope_MEAN = slope_amplitude.mean()
+        slope_SD = slope_amplitude.std()
+        CV_slope_amplitude = slope_SD/slope_MEAN
+        slope_v2v = abs(vertices/vertices_lag)
+        MEAN_v2v_slope = slope_v2v.mean()
+        SD_v2v_slope = slope_v2v.std()
+        CV_v2v_slope = SD_v2v/MEAN_v2v
+
+        return slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope 
