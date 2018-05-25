@@ -414,6 +414,6 @@ ____________________________________________
 	slope_v2v = abs(vertices / vertices_lag)
 	MEAN_v2v_slope = slope_v2v.mean()
 	SD_v2v_slope = slope_v2v.std()
-	CV_v2v_slope = SD_v2v / MEAN_v2v
+	CV_v2v_slope = SD_v2v_slope / MEAN_v2v_slope
 
 	return slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope

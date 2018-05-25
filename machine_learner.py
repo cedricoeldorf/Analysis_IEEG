@@ -14,30 +14,6 @@ import pandas as pd, time
 from extract_statistics import *
 
 np.random.seed(0)
-patient = 'FAC001'
-
-
-def make_preprocessed_data():
-	print('old code... doesnt work anymore!!! use: "from load_raw import load_raw" to get the data!')
-	return
-	global av_mem, feature_names_mem, y_mem, feature_names_perc, av_perc, y_perc
-	dt_p, dt_m, X_mem, y_mem, X_perc, y_perc = pickle.load(open('preprocessed/{}.pkl'.format(patient), 'rb'))
-
-	y_mem = y_mem.T.flatten()
-	y_perc = y_perc.T.flatten()
-
-	av_mem, feature_names_mem = extract_basic(X_mem)
-	av_perc, feature_names_perc = extract_basic(X_perc)
-
-	with open('preprocessed/features{}.pkl'.format(patient), 'wb') as fp:
-		pickle.dump([av_mem, feature_names_mem, av_perc, feature_names_perc, y_mem, y_perc], fp)
-
-
-def load_preprocessed_data():
-	global av_mem, feature_names_mem, y_mem, feature_names_perc, av_perc, y_perc
-	with open('preprocessed/features{}.pkl'.format(patient), 'rb') as f:
-		av_mem, feature_names_mem, av_perc, feature_names_perc, y_mem, y_perc = pickle.load(f)
-
 
 def knn():
 	knn = KNeighborsClassifier(n_jobs=-1)
@@ -155,22 +131,6 @@ def main():
 			patient_data['simVecM'] # all the memory y values shape = T trials
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
-
-
-# extract_basic(patient_data['eeg_m'])
-# t = time.time()
-# for trial in range(patient_data['eeg_m'].shape[1]):
-# 	for lead in range(patient_data['eeg_m'].shape[0]):
-# 		signal = patient_data['eeg_m'][lead][trial]
-# 		curvature_period_features(signal, amplitude_features(signal)[0])
-# 		break
-# 	break
-# print(time.time()-t)
-# plt.plot(signal)
-# 	plt.plot(signal_smooth)
-# 	plt.plot(vertices, signal_smooth[vertices], 'ro')
-# plt.show()
-
 
 if __name__ == '__main__':
 	main()
