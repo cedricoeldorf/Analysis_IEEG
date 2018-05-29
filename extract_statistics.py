@@ -14,46 +14,65 @@ def extract_basic(X):
 	all = []  # will be the whole dataset
 	p = 50  # for generalized mean
 	# Iterate over every trial
-	for i in range(0, X.shape[1]):
-		small = []  # this is temporary list to add to new data set after every iteration
-		feature_names = []  # for later feature extraction, we create a list of names
+	for trial in range(0, X.shape[1]):
+		small = np.array([])  # this is temporary list to add to new data set after every iteration
+		feature_names = np.array([])  # for later feature extraction, we create a list of names
 
 		# get every lead for current trial
-		for j in range(0, X.shape[0]):
-			signal = X[j][i]
-			# vertices, smoothed_signal = create_vertex2vertex(signal,spacing=10)
+		for lead in range(0, X.shape[0]):
+			signal = X[lead][trial]
+			peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
+			vertices = np.append(peaks, valleys)
+			vertices.sort()
+
+			res = amplitude_features(signal, vertices, signal_smooth)
+			AMSD = res[0]
+			small = np.append(small, res)
+			small = np.append(small, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+			small = np.append(small, Amplitude(signal))
+			small = np.append(small, crest(signal))
+			small = np.append(small, RAPN(signal))
+			small = np.append(small, RTRF(signal))
+			small = np.append(small, RTPN(signal))
+			small = np.append(small, RMS(signal))
+			small = np.append(small, harmonic(signal))
+			small = np.append(small, geometric(signal))
+			small = np.append(small, generalized_mean(signal, p))
+			small = np.append(small, PAA(signal))
+			small = np.append(small, absolute_slopes_features(vertices, signal_smooth))
+
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
 			print(smoothed_signal[vertices]) the corresponding value for these positions
-			'''
+			
 			########
 			## mean
 			small.append(signal.mean())
-			feature_names.append("mean_lead_" + str(j + 1))
+			feature_names.append("mean_lead_" + str(lead + 1))
 			########
 			## Max
 			small.append(signal.max())
-			feature_names.append("max_lead_" + str(j + 1))
+			feature_names.append("max_lead_" + str(lead + 1))
 			########
 			## Min
 			small.append(signal.min())
-			feature_names.append("min_lead_" + str(j + 1))
+			feature_names.append("min_lead_" + str(lead + 1))
 			########
 			## RMS
 			small.append(RMS(signal))
-			feature_names.append("rms_lead_" + str(j + 1))
+			feature_names.append("rms_lead_" + str(lead + 1))
 			########
 			## harmonic
 			small.append(harmonic(signal))
-			feature_names.append("harmonic_lead_" + str(j + 1))
+			feature_names.append("harmonic_lead_" + str(lead + 1))
 			########
 			## geometric
 			small.append(geometric(signal))
-			feature_names.append("geometric_lead_" + str(j + 1))
+			feature_names.append("geometric_lead_" + str(lead + 1))
 			########
 			## generalized
 			small.append(generalized_mean(signal, p))
-			feature_names.append("generalized_lead_" + str(j + 1))
+			feature_names.append("generalized_lead_" + str(lead + 1))
 
 			########
 			## Piecewise Aggregate Approximation
@@ -61,18 +80,19 @@ def extract_basic(X):
 			## This makes sense as the neurons should be firing in aggregating f,)
 			m1, m2, m3 = PAA(X)
 			small.append(m1)
-			feature_names.append("PAA1_" + str(j + 1))
+			feature_names.append("PAA1_" + str(lead + 1))
 			small.append(m2)
-			feature_names.append("PAA2_" + str(j + 1))
+			feature_names.append("PAA2_" + str(lead + 1))
 			small.append(m3)
-			feature_names.append("PAA3_" + str(j + 1))
+			feature_names.append("PAA3_" + str(lead + 1))
+			'''
 
 	# all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
 
-def curvature_period_features(signal, AMSD):  # mean and S.D. coefficient of variation of curvatures at vertices
+def curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys):  # mean and S.D. coefficient of variation of curvatures at vertices
 	"""
 			mean of curvatures (d2x/dt2) at vertices
 			S.D. of curvatures at vertices
@@ -82,7 +102,19 @@ def curvature_period_features(signal, AMSD):  # mean and S.D. coefficient of var
 			coefficient of variation of vertex-to-vertex period
 			count of mean crossings/sec (hysteresis = 25% of AMSD)
 	"""
-	vertices, signal_smooth = create_vertex2vertex(signal, spacing=10)
+	dx_dt = np.gradient(peaks)
+	dy_dt = np.gradient(signal_smooth[peaks])
+	d2x_dt2 = np.gradient(dx_dt)
+	d2y_dt2 = np.gradient(dy_dt)
+	peak_curvature = np.abs(d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (dx_dt * dx_dt + dy_dt * dy_dt) ** 1.5
+
+	dx_dt = np.gradient(valleys)
+	dy_dt = np.gradient(signal_smooth[valleys])
+	d2x_dt2 = np.gradient(dx_dt)
+	d2y_dt2 = np.gradient(dy_dt)
+	valley_curvature = np.abs(d2x_dt2 * dy_dt - dx_dt * d2y_dt2) / (dx_dt * dx_dt + dy_dt * dy_dt) ** 1.5
+
+	mean_curv_pos_over_mean_curv_neg = peak_curvature.mean() / valley_curvature.mean()
 
 	dx_dt = np.gradient(vertices)
 	dy_dt = np.gradient(signal_smooth[vertices])
@@ -100,13 +132,14 @@ def curvature_period_features(signal, AMSD):  # mean and S.D. coefficient of var
 	zero_crossing_count = (np.diff(hysterisized_signal) != 0).sum()
 	CTMXMN = zero_crossing_count / seconds
 
-	return curvature.mean(), \
-		   curvature.std(), \
-		   variation(curvature), \
-		   vertices_per_second, \
-		   vertices_period.std(), \
-		   variation(vertices_period), \
-		   CTMXMN
+	return np.array([curvature.mean(),
+					 curvature.std(),
+					 variation(curvature),
+					 vertices_per_second,
+					 vertices_period.std(),
+					 variation(vertices_period),
+					 CTMXMN,
+					 mean_curv_pos_over_mean_curv_neg])
 
 
 def hyst(x, th_lo, th_hi, initial=False):
@@ -142,7 +175,7 @@ def hyst(x, th_lo, th_hi, initial=False):
 	return x_hyst
 
 
-def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
+def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3, seperate_peaks_valleys=False):
 	## Input: Single signal array
 	"""Finds peaks and valley in `data` which are of `spacing` width.
 	:param polyorder: degree of polynomial to fit
@@ -177,10 +210,14 @@ def create_vertex2vertex(data, spacing=10, smooth=True, window=51, polyorder=3):
 	ind_valley = np.argwhere(valley_candidate)
 	ind_peak = ind_peak.reshape(ind_peak.size).tolist()
 	ind_valley = ind_valley.reshape(ind_valley.size).tolist()
-	ind = set(ind_peak + ind_valley)
-	ind = list(ind)
-	ind.sort()
-	return ind, data
+	if seperate_peaks_valleys:
+		ind_valley.sort()
+		ind_peak.sort()
+		return ind_peak, ind_valley, data
+	else:
+		ind = np.append(ind_peak, ind_valley)
+		ind.sort()
+		return ind, data
 
 
 # feature 21-26
@@ -203,7 +240,7 @@ def Amplitude(signal):
 	Amplitude5 = (max(am5) - min(am5)) / 2
 	am6 = signal[0:para5]
 	Amplitude6 = (max(am6) - min(am6)) / 2
-	return Amplitude1, Amplitude2, Amplitude3, Amplitude4, Amplitude5, Amplitude6
+	return np.array([Amplitude1, Amplitude2, Amplitude3, Amplitude4, Amplitude5, Amplitude6])
 
 
 # Feature #27
@@ -218,7 +255,7 @@ def crest(signal):
 	# Get max
 	max = np.max(signal)
 	# Return ratio
-	return max / rms
+	return np.array([max / rms])
 
 
 # Feature #28
@@ -238,7 +275,7 @@ def RAPN(signal):
 	# Mean of negative amplitudes
 	mean_of_neg = np.mean([signal[i] for i in min_indices])
 	# return ratio
-	return mean_of_pos / mean_of_neg
+	return np.array([mean_of_pos / mean_of_neg])
 
 
 # Feature #29
@@ -264,7 +301,7 @@ def RTRF(signal):
 	rise_mean = np.sum(rise_time) / len(rise_time[0])
 	fall_mean = np.sum(fall_time) / len(fall_time[0])
 	# Return ratio
-	return rise_mean / fall_mean
+	return np.array([rise_mean / fall_mean])
 
 
 def RTPN(signal):
@@ -317,21 +354,21 @@ def RTPN(signal):
 	mean_pos_crossing = np.mean(all_mean_pos_crossing)
 	mean_neg_crossing = np.mean(all_mean_neg_crossing)
 	# Return ratio
-	return mean_pos_crossing / mean_neg_crossing
+	return np.array([mean_pos_crossing / mean_neg_crossing])
 
 
 def RMS(lead):
 	sum = 0
 	for i in range(len(lead)):
 		sum += lead[i] ** 2
-	return np.sqrt(sum / len(lead))
+	return np.array([np.sqrt(sum / len(lead))])
 
 
 def harmonic(lead):
 	sum = 0
 	for i in range(len(lead)):
 		sum += 1 / lead[i]
-	return len(lead) / sum
+	return np.array([len(lead) / sum])
 
 
 def geometric(lead):
@@ -339,14 +376,14 @@ def geometric(lead):
 	for i in range(len(lead)):
 		if lead[i] != 0:
 			sum *= lead[i]
-	return abs(sum) ** (1 / len(lead))
+	return np.array([abs(sum) ** (1 / len(lead))])
 
 
 def generalized_mean(lead, p):
 	sum = 1
 	for i in range(len(lead)):
 		sum *= lead[i]
-	return abs(sum) ** (1 / p)
+	return np.array([abs(sum) ** (1 / p)])
 
 
 #  Piecewise Aggregate Approximation
@@ -359,10 +396,10 @@ def PAA(X, split=3):
 	m1 = m1.mean()
 	m2 = m2.mean()
 	m3 = m3.mean()
-	return m1, m2, m3
+	return np.array([m1, m2, m3])
 
 
-def amplitude_features(signal):
+def amplitude_features(signal, ind, vertices):
 	"""
 	Extracts the following form a single signal:
 	____________________________________________
@@ -378,8 +415,7 @@ def amplitude_features(signal):
 	amplitude = signal - mean
 	SD_amplitude = amplitude.std()
 	SKEW_amplitude = ((amplitude - mean) ** 3).mean()
-	ind, vertices = create_vertex2vertex(signal)
-	vertices = signal[ind]
+	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=0)
 	MEAN_v2v = (vertices - vertices_lag).mean()
 	SD_v2v = (vertices - vertices_lag).std()
@@ -387,10 +423,10 @@ def amplitude_features(signal):
 
 	slope_mean = abs(vertices[:-1] / vertices_lag[:-1]).mean()
 
-	return SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean
+	return np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
 
 
-def absolute_slopes_features(signal):
+def absolute_slopes_features(ind, vertices):
 	"""
 Extracts the following form a single signal:
 ____________________________________________
@@ -401,7 +437,6 @@ ____________________________________________
 11. coefficient of variation of vertex-to-vertex absolute slopes
 12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
 """
-	ind, vertices = create_vertex2vertex(signal)
 	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=0)
 	slope_amplitude = abs(vertices[:-1] / vertices_lag[:-1])
@@ -413,4 +448,4 @@ ____________________________________________
 	SD_v2v_slope = slope_v2v.std()
 	CV_v2v_slope = SD_v2v_slope / MEAN_v2v_slope
 
-	return slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope
+	return np.array([slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope])
