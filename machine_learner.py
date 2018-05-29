@@ -131,13 +131,7 @@ def main():
 			patient_data['simVecM'] # all the memory y values shape = T trials
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
-	for trial in range(0, patient_data['eeg_m'].shape[1]):
-		for lead in range(0, patient_data['eeg_m'].shape[0]):
-
-			peaks, valleys, s = create_vertex2vertex(patient_data['eeg_m'][lead][trial], seperate_peaks_valleys=True)
-
-			break
-		break
+	extract_basic(patient_data['eeg_m'])
 
 
 if __name__ == '__main__':

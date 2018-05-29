@@ -2,7 +2,7 @@ import numpy as np
 from scipy.signal import savgol_filter
 from scipy.stats import variation
 from scipy.ndimage.interpolation import shift
-import peakutils
+import peakutils, time
 
 
 ####################################
@@ -14,7 +14,11 @@ def extract_basic(X):
 	all = []  # will be the whole dataset
 	p = 50  # for generalized mean
 	# Iterate over every trial
+	tic = time.time()
+	tic_ = time.time()
 	for trial in range(0, X.shape[1]):
+		print(time.time() - tic)
+		tic = time.time()
 		small = np.array([])  # this is temporary list to add to new data set after every iteration
 		feature_names = np.array([])  # for later feature extraction, we create a list of names
 
@@ -36,11 +40,10 @@ def extract_basic(X):
 			small = np.append(small, RTPN(signal))
 			small = np.append(small, RMS(signal))
 			small = np.append(small, harmonic(signal))
-			small = np.append(small, geometric(signal))
+			# small = np.append(small, geometric(signal))
 			small = np.append(small, generalized_mean(signal, p))
 			small = np.append(small, PAA(signal))
 			small = np.append(small, absolute_slopes_features(vertices, signal_smooth))
-
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
 			print(smoothed_signal[vertices]) the corresponding value for these positions
@@ -382,8 +385,9 @@ def geometric(lead):
 def generalized_mean(lead, p):
 	sum = 1
 	for i in range(len(lead)):
-		sum *= lead[i]
-	return np.array([abs(sum) ** (1 / p)])
+		sum += lead[i]
+	return np.array([(abs(sum) ** (1 / p))/len(lead)])
+
 
 
 #  Piecewise Aggregate Approximation
@@ -438,7 +442,7 @@ ____________________________________________
 12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
 """
 	vertices = vertices[ind]
-	vertices_lag = shift(vertices, -1, cval=0)
+	vertices_lag = shift(vertices, -1, cval=1)
 	slope_amplitude = abs(vertices[:-1] / vertices_lag[:-1])
 	slope_MEAN = slope_amplitude.mean()
 	slope_SD = slope_amplitude.std()
