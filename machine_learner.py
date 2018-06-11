@@ -122,6 +122,7 @@ def xgboost():
 def main():
 	from load_raw import load_raw
 	patient_data = load_raw('raw_FAC002')
+	input()
 	'''
 			patient_data = contains all the data for patient X
 
@@ -132,17 +133,16 @@ def main():
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
 	# extract_basic()
-	# tic = time.time()
+	tic = time.time()
 	q = extract_multithreaded_basic(patient_data['eeg_m'])
-	# print('time spend:',time.time()-tic)
-	pickle.dump(q, open('queue_FAC002.pkl', 'wb'))
-	# print(q)
-	# print(len(q))
-	with open('queue_FAC002.pkl', 'rb') as f:
-		q = pickle.load(f)
+	print('time spend:',time.time()-tic)
+	features = []
 	while not q.empty():
-		print(q.get())
-
+		features.append(q.get())
+	pickle.dump(features, open('features_mem_FAC002.pkl', 'wb'))
+	with open('features_mem_FAC002.pkl', 'rb') as f:
+		features = pickle.load(f)
+	print(features)
 
 if __name__ == '__main__':
 	main()

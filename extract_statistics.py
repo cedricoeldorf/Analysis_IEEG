@@ -61,8 +61,8 @@ def execute(args):
 	feature_names = np.append(feature_names, np.array(['PAA']))
 	features = np.append(features, absolute_slopes_features(vertices, signal_smooth))
 	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
-	print('trial {} lead {} done'.format(trial, lead))
-	queue.put([lead, trial, features, feature_names])
+	# print('trial {} lead {} done'.format(trial, lead))
+	queue.put((lead, trial, features, feature_names))
 
 def extract_basic(X):
 	print("extracting basics")
@@ -497,7 +497,7 @@ def amplitude_features(signal, ind, vertices):
 	return np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
 
 
-def absolute_slopes_features(ind, vertices):
+def absolute_slopes_features(signal, ind, vertices):
 	"""
 Extracts the following form a single signal:
 ____________________________________________
@@ -508,6 +508,7 @@ ____________________________________________
 11. coefficient of variation of vertex-to-vertex absolute slopes
 12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
 """
+
 	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=1)
 	slope_amplitude = abs(vertices[:-1] / vertices_lag[:-1])
