@@ -15,7 +15,6 @@ def extract_basic(X):
 	p = 50  # for generalized mean
 	# Iterate over every trial
 	tic = time.time()
-	tic_ = time.time()
 	for trial in range(0, X.shape[1]):
 		print(time.time() - tic)
 		tic = time.time()
@@ -29,21 +28,33 @@ def extract_basic(X):
 			vertices = np.append(peaks, valleys)
 			vertices.sort()
 
-			res = amplitude_features(signal, vertices, signal_smooth)
+			res = amplitude_features(signal, vertices, signal_smooth) # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+			feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
 			AMSD = res[0]
 			small = np.append(small, res)
 			small = np.append(small, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+			feature_names = np.append(feature_names, np.array(['curvature_mean','curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
 			small = np.append(small, Amplitude(signal))
+			feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
 			small = np.append(small, crest(signal))
+			feature_names = np.append(feature_names, np.array(['crest']))
 			small = np.append(small, RAPN(signal))
+			feature_names = np.append(feature_names, np.array(['RAPN']))
 			small = np.append(small, RTRF(signal))
+			feature_names = np.append(feature_names, np.array(['RTRF']))
 			small = np.append(small, RTPN(signal))
+			feature_names = np.append(feature_names, np.array(['RTPN']))
 			small = np.append(small, RMS(signal))
+			feature_names = np.append(feature_names, np.array(['RMS']))
 			small = np.append(small, harmonic(signal))
+			feature_names = np.append(feature_names, np.array(['harmonic']))
 			# small = np.append(small, geometric(signal))
 			small = np.append(small, generalized_mean(signal, p))
+			feature_names = np.append(feature_names, np.array(['generalized_mean']))
 			small = np.append(small, PAA(signal))
+			feature_names = np.append(feature_names, np.array(['PAA']))
 			small = np.append(small, absolute_slopes_features(vertices, signal_smooth))
+			feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
 			print(smoothed_signal[vertices]) the corresponding value for these positions
