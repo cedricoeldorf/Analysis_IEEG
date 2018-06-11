@@ -131,7 +131,17 @@ def main():
 			patient_data['simVecM'] # all the memory y values shape = T trials
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
-	extract_basic(patient_data['eeg_m'])
+	# extract_basic()
+	# tic = time.time()
+	q = extract_multithreaded_basic(patient_data['eeg_m'])
+	# print('time spend:',time.time()-tic)
+	pickle.dump(q, open('queue_FAC002.pkl', 'wb'))
+	# print(q)
+	# print(len(q))
+	with open('queue_FAC002.pkl', 'rb') as f:
+		q = pickle.load(f)
+	while not q.empty():
+		print(q.get())
 
 
 if __name__ == '__main__':

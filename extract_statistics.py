@@ -3,11 +3,66 @@ from scipy.signal import savgol_filter
 from scipy.stats import variation
 from scipy.ndimage.interpolation import shift
 import peakutils, time
+from multiprocessing import Pool, Manager, cpu_count, Queue
 
 
 ####################################
 ## Extract statistics for every lead and create AV table
 ####################################
+
+
+def extract_multithreaded_basic(X):
+	pool = Pool(cpu_count())
+
+	m = Manager()
+	queue = m.Queue()  # create queue to save all the results
+	tasks = []
+	for trial in range(0, X.shape[1]):
+		for lead in range(0, X.shape[0]):
+			signal = X[lead][trial]
+			tasks.append([signal, queue, lead, trial])  # create tasks for the processes to finish
+
+	pool.map(execute, tasks)  # create the results
+	return queue
+
+
+def execute(args):
+	signal, queue, lead, trial = args[0], args[1], args[2], args[3]
+	p = 50  # for generalized mean
+	features = np.array([])
+	feature_names = np.array([])
+	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
+	vertices = np.append(peaks, valleys)
+	vertices.sort()
+
+	res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+	feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
+	AMSD = res[0]
+	features = np.append(features, res)
+	features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
+	features = np.append(features, Amplitude(signal))
+	feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
+	features = np.append(features, crest(signal))
+	feature_names = np.append(feature_names, np.array(['crest']))
+	features = np.append(features, RAPN(signal))
+	feature_names = np.append(feature_names, np.array(['RAPN']))
+	features = np.append(features, RTRF(peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['RTRF']))
+	features = np.append(features, RTPN(signal, peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['RTPN']))
+	features = np.append(features, RMS(signal))
+	feature_names = np.append(feature_names, np.array(['RMS']))
+	features = np.append(features, harmonic(signal))
+	feature_names = np.append(feature_names, np.array(['harmonic']))
+	features = np.append(features, generalized_mean(signal, p))
+	feature_names = np.append(feature_names, np.array(['generalized_mean']))
+	features = np.append(features, PAA(signal))
+	feature_names = np.append(feature_names, np.array(['PAA']))
+	features = np.append(features, absolute_slopes_features(vertices, signal_smooth))
+	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
+	print('trial {} lead {} done'.format(trial, lead))
+	queue.put([lead, trial, features, feature_names])
 
 def extract_basic(X):
 	print("extracting basics")
@@ -18,11 +73,11 @@ def extract_basic(X):
 	for trial in range(0, X.shape[1]):
 		print(time.time() - tic)
 		tic = time.time()
-		small = np.array([])  # this is temporary list to add to new data set after every iteration
 		feature_names = np.array([])  # for later feature extraction, we create a list of names
-
+		b = []
 		# get every lead for current trial
 		for lead in range(0, X.shape[0]):
+			small = np.array([])  # this is temporary list to add to new data set after every iteration
 			signal = X[lead][trial]
 			peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
 			vertices = np.append(peaks, valleys)
@@ -40,9 +95,9 @@ def extract_basic(X):
 			feature_names = np.append(feature_names, np.array(['crest']))
 			small = np.append(small, RAPN(signal))
 			feature_names = np.append(feature_names, np.array(['RAPN']))
-			small = np.append(small, RTRF(signal))
+			small = np.append(small, RTRF(peaks, valleys))
 			feature_names = np.append(feature_names, np.array(['RTRF']))
-			small = np.append(small, RTPN(signal))
+			small = np.append(small, RTPN(signal, peaks, valleys))
 			feature_names = np.append(feature_names, np.array(['RTPN']))
 			small = np.append(small, RMS(signal))
 			feature_names = np.append(feature_names, np.array(['RMS']))
@@ -100,8 +155,9 @@ def extract_basic(X):
 			small.append(m3)
 			feature_names.append("PAA3_" + str(lead + 1))
 			'''
+			b.append(small)
+		all.append(b)
 
-	# all.append(small)
 	all = np.asarray(all)
 	return all, feature_names
 
@@ -293,15 +349,15 @@ def RAPN(signal):
 
 
 # Feature #29
-def RTRF(signal):
+def RTRF(peaks ,valleys):
 	""" Feature #29
 
 		Returns: Mean rise time / mean fall time
 	"""
 	# Get max indices
-	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	max_indices = peaks
 	# Get min indices
-	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	min_indices = valleys
 	# Extract rise times and fall times
 	rise_time = []
 	fall_time = []
@@ -318,7 +374,7 @@ def RTRF(signal):
 	return np.array([rise_mean / fall_mean])
 
 
-def RTPN(signal):
+def RTPN(signal, peaks, valleys):
 	""" Feature # 30
 
 		Returns: Mean period of crossings of the mean positive amplitude /
@@ -326,10 +382,10 @@ def RTPN(signal):
 	"""
 	# Get max indices
 	# max_indices = peakutils.indexes(signal)
-	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	max_indices = peaks
 	# Get min indices
 	# min_indices = peakutils.indexes(signal*(-1))
-	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	min_indices = valleys
 	# Mean of positive amplitudes
 	mean_of_pos = np.mean([signal[i] for i in max_indices])
 	# Mean of negative amplitudes
