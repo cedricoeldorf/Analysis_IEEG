@@ -148,26 +148,61 @@ def find_bin_size(length):
 	return list
 
 ''' ############################################################################
+## Find overlap size
+########################################################################### '''
+
+def find_overlap_size(length, window):
+	list = []
+	for i in range(1, length):
+		if i == window:
+			break
+		if length % (window - i) == 0:
+			list.append(i)
+	return list
+
+''' ############################################################################
 ## Segment trials
 ########################################################################### '''
 
-def segment_lead_matrix(lead_matrix, bin_size):
+def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_size=10, include_last_window=True):
 
 	n_trials = lead_matrix.shape[0]
 	trial_length = lead_matrix.shape[1]
-	if trial_length % bin_size != 0:
-		print('Wrong bin size, try:')
-		print(find_bin_size(trial_length))
-		return
-	step_size = int(trial_length / bin_size)
-	lead_list = []
-	for trial in range(n_trials):
-		bin = []
-		for i in range(bin_size):
-			segment = lead_matrix[trial][i:i+step_size]
-			bin.append(segment)
-		lead_list.append(bin)
-	return lead_list
+
+	if overlap == False:
+		if trial_length % bin_size != 0 or bin_size > trial_length:
+			print('Wrong bin size, try:')
+			print(find_bin_size(trial_length))
+			return
+		step_size = int(trial_length / bin_size)
+		step_size = bin_size
+		lead_list = []
+		for trial in range(n_trials):
+			bin = []
+			i = 0
+			for j in range(trial_length/bin_size)):
+				segment = lead_matrix[trial][i:i+step_size]
+				bin.append(segment)
+				i += step_size
+			lead_list.append(bin)
+		return lead_list
+
+	if overlap == True:
+		step_size = int(trial_length / bin_size)
+		lead_list = []
+		for trial in range(n_trials):
+			bin = []
+			i = 0
+			for j in range(0, trial_length):
+				if i + bin_size >= trial_length:
+					if include_last_window:
+						bin.append(lead_matrix[trial][i:])
+					break
+				segment = lead_matrix[trial][i:i+bin_size]
+				bin.append(segment)
+				i = i + (bin_size - overlap_size)
+			lead_list.append(bin)
+		return lead_list
 
 ''' ############################################################################
 ## EX
@@ -183,8 +218,11 @@ separation_mem = separate_leads(eeg_m)
 separation_perc = separate_leads(eeg_p)
 mem_leads = []
 perc_leads = []
-n_leads = len(separation_mem)
+n_leads_m = len(separation_mem)
+n_leads_p = len(separation_perc)
 bin_size = 40
-for i in range(n_leads):
-	mem_leads.append(segment_lead_matrix(separation_mem[i], bin_size))
+overlap_size = 15
+for i in range(n_leads_m):
+	mem_leads.append(segment_lead_matrix(separation_mem[i], bin_size, overlap=True))
+for i in range(n_leads_p):
 	perc_leads.append(segment_lead_matrix(separation_perc[i], bin_size))
