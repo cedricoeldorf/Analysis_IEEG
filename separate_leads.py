@@ -35,6 +35,7 @@ def find_best_bin_size(size, bin):
 			return i
 	return None
 
+
 ''' ############################################################################
 ## Find overlap size
 ########################################################################### '''
@@ -55,12 +56,20 @@ def find_overlap_size(length, window):
 ########################################################################### '''
 
 
+def window(signal, window_size=4, step_size=2):
+	sh = (signal.size - window_size + 1, window_size)
+	st = signal.strides * 2
+	view = np.lib.stride_tricks.as_strided(signal, strides=st, shape=sh)[0::step_size]
+	return view
+
+
 def execute(args):
 	signal, queue, bin_size, overlap, overlap_step, lead, trial = args[0], args[1], args[2], args[3], args[4], args[5], args[6]
 	if overlap:
-		splitted = np.array(list(zip(*[islice(signal, i * overlap_step, None) for i in range(bin_size)])))
+
+		splitted = window(signal, bin_size, overlap_step)
 	else:
-		splitted = np.split(signal, int(len(signal) / bin_size))
+		splitted = np.array(np.split(signal, int(len(signal) / bin_size)))
 	queue.put((lead, trial, bin_size, overlap, overlap_step, splitted))
 
 
@@ -68,7 +77,8 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
 	n_leads = eeg.shape[0]
 	n_trials = eeg.shape[1]
 	tasks = []
-	pool = Pool(cpu_count())
+	pool = Pool(4)
+	# pool = Pool(cpu_count())
 	manager = Manager()
 	queue = manager.Queue()
 
@@ -78,10 +88,13 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
 			tasks.append([signal, queue, bin_size, overlap, overlap_step, lead, trial])
 	pool.map(execute, tasks)  # create the results
 	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+	del tasks
 	while not queue.empty():
 		(lead, trial, bin_size, overlap, overlap_step, splitted) = queue.get()
 		result_eeg[lead][trial] = splitted
 	result_eeg = np.array(result_eeg)
+	del queue, pool, manager
+	print(result_eeg.shape)
 	return result_eeg
 
 
@@ -94,7 +107,7 @@ def segment_eeg(eeg, bin_size, overlap, overlap_step):
 		for trial in range(n_trials):
 			for lead in range(n_leads):
 				signal = eeg[lead][trial]
-				splitted = np.array(list(zip(*[islice(signal, i*overlap_step, None) for i in range(bin_size)])))
+				splitted = np.array(list(zip(*[islice(signal, i * overlap_step, None) for i in range(bin_size)])))
 				result_eeg[lead][trial] = splitted
 	else:
 		for trial in range(n_trials):
@@ -102,7 +115,7 @@ def segment_eeg(eeg, bin_size, overlap, overlap_step):
 				signal = eeg[lead][trial]
 				# if len(signal) % bin_size != 0:
 				# 	raise Exception('Wrong bin size {} for lead'.format(bin_size), lead, 'and trial', trial)
-				splitted = np.split(signal, int(len(signal)/bin_size))
+				splitted = np.split(signal, int(len(signal) / bin_size))
 				result_eeg[lead][trial] = splitted
 	result_eeg = np.array(result_eeg)
 	return result_eeg

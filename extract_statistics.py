@@ -16,8 +16,8 @@ def extract_multithreaded_basic(X):
 	n_leads = X.shape[0]
 	n_trials = X.shape[1]
 
-	pool = Pool(1)
-	# pool = Pool(cpu_count())
+	# pool = Pool(1)
+	pool = Pool(cpu_count())
 	m = Manager()
 
 	queue = m.Queue()  # create queue to save all the results
@@ -56,57 +56,46 @@ def extract_multithreaded_basic(X):
 
 
 def execute(args):
-	try:
-		p = 50
-		signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
-		features = np.array([])
-		feature_names = np.array([])
-		peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=5, seperate_peaks_valleys=True)
-		vertices = np.append(peaks, valleys)
-		vertices.sort()
-		import matplotlib.pyplot as plt
-		plt.plot(signal_smooth)
-		plt.plot(vertices, signal_smooth[vertices])
-		plt.show()
-		res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
-		feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
-		AMSD = res[0]
-		features = np.append(features, res)
-		features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
-		feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
-		features = np.append(features, Amplitude(signal))
-		feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
-		features = np.append(features, crest(signal))
-		feature_names = np.append(feature_names, np.array(['crest']))
-		features = np.append(features, RAPN(signal))
-		feature_names = np.append(feature_names, np.array(['RAPN']))
-		features = np.append(features, RTRF(peaks, valleys))
-		feature_names = np.append(feature_names, np.array(['RTRF']))
-		features = np.append(features, RTPN(signal, peaks, valleys))
-		feature_names = np.append(feature_names, np.array(['RTPN']))
-		features = np.append(features, RMS(signal))
-		feature_names = np.append(feature_names, np.array(['RMS']))
-		features = np.append(features, harmonic(signal))
-		feature_names = np.append(feature_names, np.array(['harmonic']))
-		features = np.append(features, generalized_mean(signal, p))
-		feature_names = np.append(feature_names, np.array(['generalized_mean']))
-		features = np.append(features, PAA(signal))
-		feature_names = np.append(feature_names, np.array(['PAA']))
-		features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
-		feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
-		# print('trial {} lead {} done'.format(trial, lead))
-		queue.put((lead, trial, bin, features, feature_names))
-	except Exception as e:
-		# print(args)
-		if 'Shape of array too small' in str(e):
-			print(peaks)
-			dx_dt = np.gradient(peaks)
-			print(dx_dt)
-			print('-' * 1000)
-			print(e)
-			d2x_dt2 = np.gradient(dx_dt)
-			print(d2x_dt2)
-	# raise e
+	p = 50
+	signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
+	features = np.array([])
+	feature_names = np.array([])
+	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=5, seperate_peaks_valleys=True)
+	vertices = np.append(peaks, valleys)
+	vertices.sort()
+	# import matplotlib.pyplot as plt
+	# plt.plot(signal_smooth)
+	# plt.plot(vertices, signal_smooth[vertices])
+	# plt.show()
+	res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+	feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
+	AMSD = res[0]
+	features = np.append(features, res)
+	features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
+	features = np.append(features, Amplitude(signal))
+	feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
+	features = np.append(features, crest(signal))
+	feature_names = np.append(feature_names, np.array(['crest']))
+	features = np.append(features, RAPN(signal))
+	feature_names = np.append(feature_names, np.array(['RAPN']))
+	features = np.append(features, RTRF(peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['RTRF']))
+	features = np.append(features, RTPN(signal, peaks, valleys))
+	feature_names = np.append(feature_names, np.array(['RTPN']))
+	features = np.append(features, RMS(signal))
+	feature_names = np.append(feature_names, np.array(['RMS']))
+	features = np.append(features, harmonic(signal))
+	feature_names = np.append(feature_names, np.array(['harmonic']))
+	features = np.append(features, generalized_mean(signal, p))
+	feature_names = np.append(feature_names, np.array(['generalized_mean']))
+	features = np.append(features, PAA(signal))
+	feature_names = np.append(feature_names, np.array(['PAA']))
+	features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
+	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
+	# print('trial {} lead {} done'.format(trial, lead))
+	queue.put((lead, trial, bin, features, feature_names))
+
 
 
 def extract_basic(X):
