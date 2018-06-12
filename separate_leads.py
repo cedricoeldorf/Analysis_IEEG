@@ -77,8 +77,8 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
 	n_leads = eeg.shape[0]
 	n_trials = eeg.shape[1]
 	tasks = []
-	pool = Pool(4)
-	# pool = Pool(cpu_count())
+	# pool = Pool(4)
+	pool = Pool(cpu_count())
 	manager = Manager()
 	queue = manager.Queue()
 
@@ -94,7 +94,7 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
 		result_eeg[lead][trial] = splitted
 	result_eeg = np.array(result_eeg)
 	del queue, pool, manager
-	print(result_eeg.shape)
+	# print(result_eeg.shape)
 	return result_eeg
 
 

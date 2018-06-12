@@ -132,12 +132,14 @@ def main():
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
 	from separate_leads import segments_patient  # import the function
-	patient_data = segments_patient(patient_data, bin_size=880, overlap=True, overlap_step=200, multithreaded=True)
+	patient_data = segments_patient(patient_data, bin_size=880, overlap=True, overlap_step=220, multithreaded=True)
 
 	features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
+	pickle.dump((features, feature_names), open('preprocessed/pickle/features_002_m.pkl', 'wb'))
 	print(features.shape)
 	print(feature_names.shape)
 	print(feature_names)
+
 
 if __name__ == '__main__':
 	main()

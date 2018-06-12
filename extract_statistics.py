@@ -4,6 +4,7 @@ from scipy.stats import variation
 from scipy.ndimage.interpolation import shift
 import peakutils, time
 from multiprocessing import Pool, Manager, cpu_count
+import tsfresh.feature_extraction.feature_calculators as ts
 
 
 ####################################
@@ -16,8 +17,8 @@ def extract_multithreaded_basic(X):
 	n_leads = X.shape[0]
 	n_trials = X.shape[1]
 
-	# pool = Pool(1)
-	pool = Pool(cpu_count())
+	pool = Pool(4)
+	# pool = Pool(cpu_count())
 	m = Manager()
 
 	queue = m.Queue()  # create queue to save all the results
@@ -39,7 +40,7 @@ def extract_multithreaded_basic(X):
 			for lead in range(n_leads):
 				signal = X[lead][trial]
 				tasks.append([signal, queue, lead, trial, -1])  # create tasks for the processes to finish
-
+	print('start creating features...')
 	pool.map(execute, tasks)  # create the results
 
 	if binned:
@@ -55,47 +56,58 @@ def extract_multithreaded_basic(X):
 	return result_features, feature_names
 
 
+ts_features = True
+
+
 def execute(args):
 	p = 50
 	signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
 	features = np.array([])
 	feature_names = np.array([])
-	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=5, seperate_peaks_valleys=True)
+	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=7, window=31, seperate_peaks_valleys=True)
 	vertices = np.append(peaks, valleys)
 	vertices.sort()
 	# import matplotlib.pyplot as plt
 	# plt.plot(signal_smooth)
 	# plt.plot(vertices, signal_smooth[vertices])
 	# plt.show()
-	res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
-	feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
-	AMSD = res[0]
-	features = np.append(features, res)
-	features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
-	features = np.append(features, Amplitude(signal))
-	feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
-	features = np.append(features, crest(signal))
-	feature_names = np.append(feature_names, np.array(['crest']))
-	features = np.append(features, RAPN(signal))
-	feature_names = np.append(feature_names, np.array(['RAPN']))
-	features = np.append(features, RTRF(peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['RTRF']))
-	features = np.append(features, RTPN(signal, peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['RTPN']))
-	features = np.append(features, RMS(signal))
-	feature_names = np.append(feature_names, np.array(['RMS']))
-	features = np.append(features, harmonic(signal))
-	feature_names = np.append(feature_names, np.array(['harmonic']))
-	features = np.append(features, generalized_mean(signal, p))
-	feature_names = np.append(feature_names, np.array(['generalized_mean']))
-	features = np.append(features, PAA(signal))
-	feature_names = np.append(feature_names, np.array(['PAA']))
-	features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
-	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
+	if ts_features:
+		features = np.append(features, TS_features(signal))
+		features = np.append(features, TS_features2(signal))
+		features = np.append(features, TS_features5(signal))
+		features = np.append(features, TS_features6(signal))
+		features = np.append(features, TS_features11(signal))
+		features = np.append(features, TS_features12(signal))
+		feature_names = np.append(feature_names, np.array(['all_ts_features']))
+	else:
+		res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+		feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
+		AMSD = res[0]
+		features = np.append(features, res)
+		features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
+		features = np.append(features, Amplitude(signal))
+		feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
+		features = np.append(features, crest(signal))
+		feature_names = np.append(feature_names, np.array(['crest']))
+		features = np.append(features, RAPN(signal))
+		feature_names = np.append(feature_names, np.array(['RAPN']))
+		features = np.append(features, RTRF(peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['RTRF']))
+		features = np.append(features, RTPN(signal, peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['RTPN']))
+		features = np.append(features, RMS(signal))
+		feature_names = np.append(feature_names, np.array(['RMS']))
+		features = np.append(features, harmonic(signal))
+		feature_names = np.append(feature_names, np.array(['harmonic']))
+		features = np.append(features, generalized_mean(signal, p))
+		feature_names = np.append(feature_names, np.array(['generalized_mean']))
+		features = np.append(features, PAA(signal))
+		feature_names = np.append(feature_names, np.array(['PAA']))
+		features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
+		feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
 	# print('trial {} lead {} done'.format(trial, lead))
 	queue.put((lead, trial, bin, features, feature_names))
-
 
 
 def extract_basic(X):
@@ -556,3 +568,156 @@ def absolute_slopes_features(signal, ind, vertices):
 	CV_v2v_slope = SD_v2v_slope / MEAN_v2v_slope
 
 	return np.array([slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope])
+
+
+# ts features 1
+def TS_features(signal):
+	energy = ts.abs_energy(signal)
+	abs_sum = ts.absolute_sum_of_changes(signal)
+	above_mean = ts.count_above_mean(signal)
+	below_mean = ts.count_below_mean(signal)
+	first_max_location = ts.first_location_of_maximum(signal)
+	first_min_location = ts.first_location_of_minimum(signal)
+	return energy, abs_sum, above_mean, below_mean, first_max_location, first_min_location
+
+
+# ts features
+def TS_features2(signal):
+	duplicate = ts.has_duplicate(signal)  # t.f
+	duplicate_max = ts.has_duplicate_max(signal)  # t.f
+	duplicate_min = ts.has_duplicate_min(signal)  # t.f
+	kurtosis = ts.kurtosis(signal)
+	longest_strike_above = ts.longest_strike_above_mean(signal)
+	longest_strike_below = ts.longest_strike_below_mean(signal)
+
+	return duplicate, duplicate_max, duplicate_min, kurtosis, longest_strike_above, longest_strike_below
+
+
+# ts features
+def TS_feature3(signal):
+	max_ts = ts.maximum(signal)
+	mean_rs = ts.mean(signal)
+	mean_abs_change = ts.mean_abs_change(signal)
+	mean_change = ts.mean_change(signal)
+	median_ts = ts.median(signal)
+	minimum_ts = ts.minimum(signal)
+	return max_ts, mean_rs, mean_abs_change, mean_change, median_ts, minimum_ts
+
+
+# ts features with param
+# param_ts =
+# def TS_features4(signal, param_ts):
+#
+#
+#     agg_coorelation = ts.agg_autocorrelation(signal, param_ts)
+#     linear_trend = ts.agg_linear_trend(signal, param_ts)
+#     coeffi = ts.ar_coefficient(signal,param_ts)
+#     dicky = ts.augmented_dickey_fuller(signal, param_ts)
+#
+#     cwt_coeffi = ts.cwt_coefficients(signal,param_ts)
+#     fried = ts.friedrich_coefficients(signal,param_ts)
+#     mass_quant = ts.index_mass_quantile(signal,param_ts)
+#
+#
+#     return agg_coorelation,linear_trend, coeffi, dicky, cwt_coeffi,fried,mass_quant
+
+
+
+def TS_features5(signal):
+	# ts features with
+	mts = 2
+	rts = 6
+
+	entropy = ts.approximate_entropy(signal, mts, rts)
+	max_langevin = ts.max_langevin_fixed_point(signal, mts, rts)
+	return entropy, max_langevin
+
+
+def TS_features6(signal):
+	length_ts = ts.length(signal)
+	return length_ts
+
+
+# ts features with lags
+
+
+
+
+def TS_feature7(signal):
+	lag_ts = 203  # lag is a number
+	autocorelation = ts.autocorrelation(signal, lag_ts)
+	value_c3 = ts.c3(signal, lag_ts)
+
+	return autocorelation, value_c3,
+
+
+cross_point = 0,
+
+
+def TS_feature8(signal, cross_point):
+	number_cross = ts.number_crossing_m(signal, cross_point)
+
+	return number_cross
+
+
+# def TS_features9(signal,peaks):
+#
+#     number_of_peaks = ts.number_cwt_peaks(signal,peaks)
+#     number_peaks = ts.number_peaks(signal, peaks)
+#
+#     return number_of_peaks, number_peaks
+
+
+# def TS_features10(signal,param_ts):
+#
+#     partial_autocorrelation = ts.partial_autocorrelation(signal,param_ts)
+#     spkt_w_density = ts.spkt_welch_density(signal, param_ts)
+#     symmetry = ts.symmetry_looking(signal, param_ts)
+#
+#     return partial_autocorrelation, spkt_w_density, symmetry
+
+
+def TS_features11(signal):
+	percentage_of_reoccurring = ts.percentage_of_reoccurring_datapoints_to_all_datapoints(signal)
+	percentage_of_reoccurring_values = ts.percentage_of_reoccurring_values_to_all_values(signal)
+	ratio_value_number = ts.ratio_value_number_to_time_series_length(signal)
+	sample_entropy = ts.sample_entropy(signal)
+	skewness = ts.skewness(signal)
+
+	return percentage_of_reoccurring, percentage_of_reoccurring_values, ratio_value_number, sample_entropy, skewness
+
+
+def TS_features12(signal):
+	stand_deviation = ts.standard_deviation(signal)
+	sum_reoccurring = ts.sum_of_reoccurring_data_points(signal)
+	sum_r_value = ts.sum_of_reoccurring_values(signal)
+	sum_v = ts.sum_values(signal)
+	variance = ts.variance(signal)
+	variance_larger_than_sd = ts.variance_larger_than_standard_deviation(signal)
+
+	return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance,
+
+
+def TS_feature13(signal, min, max):
+	range_count = ts.range_count(signal, min, max)  #
+
+	return range_count
+
+# def TS_feature14(key,value):
+#     key =0.1
+#     value = 0.5
+#     set_property = ts.set_property(key,value)
+#     value_count = ts.value_count(signal,value)
+#     return set_property, value_count
+
+# def TS_feature15(signal, max_bins):
+#
+#     binned_entropy = ts.binned_entropy(signal, max_bins)
+#
+#     return binned_entropy
+
+# def TS_feature16(signal,ql,qh,isabs,f_agg):
+#
+#     change_quantiles = ts.change_quantiles(signal,ql,qh,isabs,f_agg)
+#
+#     return change_quantiles
