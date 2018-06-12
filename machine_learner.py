@@ -132,7 +132,7 @@ def main():
 			patient_data['simVecP'] # all the perception y values shape = T trials
 	'''
 	from separate_leads import segments_patient  # import the function
-	patient_data = segments_patient(patient_data, bin_size=400, overlap=False, overlap_step=50, multithreaded=True)
+	patient_data = segments_patient(patient_data, bin_size=880, overlap=False, overlap_step=50, multithreaded=True)
 
 	features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
 	print(features.shape)

@@ -16,7 +16,8 @@ def extract_multithreaded_basic(X):
 	n_leads = X.shape[0]
 	n_trials = X.shape[1]
 
-	pool = Pool(cpu_count())
+	pool = Pool(1)
+	# pool = Pool(cpu_count())
 	m = Manager()
 
 	queue = m.Queue()  # create queue to save all the results
@@ -29,9 +30,6 @@ def extract_multithreaded_basic(X):
 			for lead in range(n_leads):
 				for bin in range(n_bins):
 					part = X[lead][trial][bin]
-					print(part.mean())
-					print(part[0], part[1])
-					input()
 					tasks.append([part, queue, lead, trial, bin])
 	else:
 		print('normal features!')
@@ -63,10 +61,13 @@ def execute(args):
 		signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
 		features = np.array([])
 		feature_names = np.array([])
-		peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
+		peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=5, seperate_peaks_valleys=True)
 		vertices = np.append(peaks, valleys)
 		vertices.sort()
-
+		import matplotlib.pyplot as plt
+		plt.plot(signal_smooth)
+		plt.plot(vertices, signal_smooth[vertices])
+		plt.show()
 		res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
 		feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
 		AMSD = res[0]
@@ -98,12 +99,14 @@ def execute(args):
 	except Exception as e:
 		# print(args)
 		if 'Shape of array too small' in str(e):
-			print('-'*1000)
+			print(peaks)
+			dx_dt = np.gradient(peaks)
+			print(dx_dt)
+			print('-' * 1000)
 			print(e)
-			print(args)
-			import sys
-			sys.exit(-1)
-		# raise e
+			d2x_dt2 = np.gradient(dx_dt)
+			print(d2x_dt2)
+	# raise e
 
 
 def extract_basic(X):
@@ -121,10 +124,9 @@ def extract_basic(X):
 		for lead in range(0, X.shape[0]):
 			small = np.array([])  # this is temporary list to add to new data set after every iteration
 			signal = X[lead][trial]
-			peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
+			peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, window=10, seperate_peaks_valleys=True)
 			vertices = np.append(peaks, valleys)
 			vertices.sort()
-
 			res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
 			feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
 			AMSD = res[0]
