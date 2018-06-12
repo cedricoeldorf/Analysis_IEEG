@@ -43,18 +43,18 @@ def TS_feature3(signal):
 # ts features with param
 # param_ts =
 # def TS_features4(signal, param_ts):
-# 
-# 
+#
+#
 #     agg_coorelation = ts.agg_autocorrelation(signal, param_ts)
 #     linear_trend = ts.agg_linear_trend(signal, param_ts)
 #     coeffi = ts.ar_coefficient(signal,param_ts)
 #     dicky = ts.augmented_dickey_fuller(signal, param_ts)
-# 
+#
 #     cwt_coeffi = ts.cwt_coefficients(signal,param_ts)
 #     fried = ts.friedrich_coefficients(signal,param_ts)
 #     mass_quant = ts.index_mass_quantile(signal,param_ts)
-# 
-# 
+#
+#
 #     return agg_coorelation,linear_trend, coeffi, dicky, cwt_coeffi,fried,mass_quant
 
 # ts features with
@@ -91,21 +91,21 @@ def TS_feature8(signal,cross_point):
 
     return number_cross
 
-def TS_features9(signal,peaks):
-    
-    p = max(signal)
-    number_of_peaks = ts.number_cwt_peaks(signal,p)
-    number_peaks = ts.number_peaks(signal, p)
 
-    return number_of_peaks, number_peaks
+# def TS_features9(signal,peaks):
+# 
+#     number_of_peaks = ts.number_cwt_peaks(signal,peaks)
+#     number_peaks = ts.number_peaks(signal, peaks)
+# 
+#     return number_of_peaks, number_peaks
 
 
 # def TS_features10(signal,param_ts):
-# 
+#
 #     partial_autocorrelation = ts.partial_autocorrelation(signal,param_ts)
 #     spkt_w_density = ts.spkt_welch_density(signal, param_ts)
 #     symmetry = ts.symmetry_looking(signal, param_ts)
-# 
+#
 #     return partial_autocorrelation, spkt_w_density, symmetry
 
 
@@ -127,28 +127,30 @@ def TS_features12(signal):
     variance = ts.variance(signal)
     variance_larger_than_sd = ts.variance_larger_than_standard_deviation(signal)
 
-    return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance, variance_larger_than_sd
+    return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance,
 
 
-########
 def TS_feature13(signal,min,max):
+
     range_count = ts.range_count(signal,min,max) #
 
     return range_count
 
-def TS_feature14(key,value):
-    set_property = ts.set_property(key,value)
-    value_count = ts.value_count(signal,value)
-    return set_property, value_count
+# def TS_feature14(key,value):
+#     key =0.1
+#     value = 0.5
+#     set_property = ts.set_property(key,value)
+#     value_count = ts.value_count(signal,value)
+#     return set_property, value_count
 
 # def TS_feature15(signal, max_bins):
-# 
+#
 #     binned_entropy = ts.binned_entropy(signal, max_bins)
-# 
+#
 #     return binned_entropy
 
-def TS_feature16(signal,ql,qh,isabs,f_agg):
-
-    change_quantiles = ts.change_quantiles(signal,ql,qh,isabs,f_agg)
-
-    return change_quantiles
+# def TS_feature16(signal,ql,qh,isabs,f_agg):
+#
+#     change_quantiles = ts.change_quantiles(signal,ql,qh,isabs,f_agg)
+#
+#     return change_quantiles
