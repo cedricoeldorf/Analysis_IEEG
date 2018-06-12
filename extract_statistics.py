@@ -29,6 +29,9 @@ def extract_multithreaded_basic(X):
 			for lead in range(n_leads):
 				for bin in range(n_bins):
 					part = X[lead][trial][bin]
+					print(part.mean())
+					print(part[0], part[1])
+					input()
 					tasks.append([part, queue, lead, trial, bin])
 	else:
 		print('normal features!')
@@ -55,42 +58,53 @@ def extract_multithreaded_basic(X):
 
 
 def execute(args):
-	p = 50
-	signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
-	features = np.array([])
-	feature_names = np.array([])
-	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
-	vertices = np.append(peaks, valleys)
-	vertices.sort()
+	try:
+		p = 50
+		signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
+		features = np.array([])
+		feature_names = np.array([])
+		peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
+		vertices = np.append(peaks, valleys)
+		vertices.sort()
 
-	res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
-	feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
-	AMSD = res[0]
-	features = np.append(features, res)
-	features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
-	features = np.append(features, Amplitude(signal))
-	feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
-	features = np.append(features, crest(signal))
-	feature_names = np.append(feature_names, np.array(['crest']))
-	features = np.append(features, RAPN(signal))
-	feature_names = np.append(feature_names, np.array(['RAPN']))
-	features = np.append(features, RTRF(peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['RTRF']))
-	features = np.append(features, RTPN(signal, peaks, valleys))
-	feature_names = np.append(feature_names, np.array(['RTPN']))
-	features = np.append(features, RMS(signal))
-	feature_names = np.append(feature_names, np.array(['RMS']))
-	features = np.append(features, harmonic(signal))
-	feature_names = np.append(feature_names, np.array(['harmonic']))
-	features = np.append(features, generalized_mean(signal, p))
-	feature_names = np.append(feature_names, np.array(['generalized_mean']))
-	features = np.append(features, PAA(signal))
-	feature_names = np.append(feature_names, np.array(['PAA']))
-	features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
-	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
-	# print('trial {} lead {} done'.format(trial, lead))
-	queue.put((lead, trial, bin, features, feature_names))
+		res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+		feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
+		AMSD = res[0]
+		features = np.append(features, res)
+		features = np.append(features, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
+		features = np.append(features, Amplitude(signal))
+		feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
+		features = np.append(features, crest(signal))
+		feature_names = np.append(feature_names, np.array(['crest']))
+		features = np.append(features, RAPN(signal))
+		feature_names = np.append(feature_names, np.array(['RAPN']))
+		features = np.append(features, RTRF(peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['RTRF']))
+		features = np.append(features, RTPN(signal, peaks, valleys))
+		feature_names = np.append(feature_names, np.array(['RTPN']))
+		features = np.append(features, RMS(signal))
+		feature_names = np.append(feature_names, np.array(['RMS']))
+		features = np.append(features, harmonic(signal))
+		feature_names = np.append(feature_names, np.array(['harmonic']))
+		features = np.append(features, generalized_mean(signal, p))
+		feature_names = np.append(feature_names, np.array(['generalized_mean']))
+		features = np.append(features, PAA(signal))
+		feature_names = np.append(feature_names, np.array(['PAA']))
+		features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
+		feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
+		# print('trial {} lead {} done'.format(trial, lead))
+		queue.put((lead, trial, bin, features, feature_names))
+	except Exception as e:
+		# print(args)
+		if 'Shape of array too small' in str(e):
+			print('-'*1000)
+			print(e)
+			print(args)
+			import sys
+			sys.exit(-1)
+		# raise e
+
 
 def extract_basic(X):
 	print("extracting basics")
@@ -111,12 +125,13 @@ def extract_basic(X):
 			vertices = np.append(peaks, valleys)
 			vertices.sort()
 
-			res = amplitude_features(signal, vertices, signal_smooth) # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
+			res = amplitude_features(signal, vertices, signal_smooth)  # np.array([SD_amplitude, SKEW_amplitude, MEAN_v2v, SD_v2v, CV_v2v, slope_mean])
 			feature_names = np.append(feature_names, np.array(['SD_amplitude', 'SKEW_amplitude', 'MEAN_v2v', 'SD_v2v', 'CV_v2v', 'slope_mean']))
 			AMSD = res[0]
 			small = np.append(small, res)
 			small = np.append(small, curvature_period_features(AMSD, vertices, signal_smooth, peaks, valleys))
-			feature_names = np.append(feature_names, np.array(['curvature_mean','curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
+			feature_names = np.append(feature_names,
+									  np.array(['curvature_mean', 'curvature_std', 'variation_curvature', 'vertices_per_second', 'vertices_period_std', 'variation_vertices_period', 'CTMXMN', 'mean_curv_pos_over_mean_curv_neg']))
 			small = np.append(small, Amplitude(signal))
 			feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
 			small = np.append(small, crest(signal))
@@ -136,7 +151,7 @@ def extract_basic(X):
 			feature_names = np.append(feature_names, np.array(['generalized_mean']))
 			small = np.append(small, PAA(signal))
 			feature_names = np.append(feature_names, np.array(['PAA']))
-			small = np.append(small, absolute_slopes_features(vertices, signal_smooth))
+			small = np.append(small, absolute_slopes_features(signal, vertices, signal_smooth))
 			feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
@@ -377,7 +392,7 @@ def RAPN(signal):
 
 
 # Feature #29
-def RTRF(peaks ,valleys):
+def RTRF(peaks, valleys):
 	""" Feature #29
 
 		Returns: Mean rise time / mean fall time
@@ -481,8 +496,7 @@ def generalized_mean(lead, p):
 	sum = 1
 	for i in range(len(lead)):
 		sum += lead[i]
-	return np.array([(abs(sum) ** (1 / p))/len(lead)])
-
+	return np.array([(abs(sum) ** (1 / p)) / len(lead)])
 
 
 #  Piecewise Aggregate Approximation
@@ -527,19 +541,21 @@ def amplitude_features(signal, ind, vertices):
 
 def absolute_slopes_features(signal, ind, vertices):
 	"""
-Extracts the following form a single signal:
-____________________________________________
-7. S.D. of absolute slopes of raw amplitudes
-8. coefficient of variation of absolute slopes of raw amplitudes
-9. mean of vertex-to-vertex absolute slopes
-10. S.D. of vertex-to-vertex absolute slopes
-11. coefficient of variation of vertex-to-vertex absolute slopes
-12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
-"""
-
+	Extracts the following form a single signal:
+	____________________________________________
+	7. S.D. of absolute slopes of raw amplitudes
+	8. coefficient of variation of absolute slopes of raw amplitudes
+	9. mean of vertex-to-vertex absolute slopes
+	10. S.D. of vertex-to-vertex absolute slopes
+	11. coefficient of variation of vertex-to-vertex absolute slopes
+	12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
+	mean of absolute slopes of raw amplitudes, mean (abs(dx/dt)) - slope_MEAN
+	"""
 	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=1)
-	slope_amplitude = abs(vertices[:-1] / vertices_lag[:-1])
+	signal = signal[ind]
+	signal_lag = shift(signal, -1, cval=0)
+	slope_amplitude = abs(signal / signal_lag)
 	slope_MEAN = slope_amplitude.mean()
 	slope_SD = slope_amplitude.std()
 	CV_slope_amplitude = slope_SD / slope_MEAN

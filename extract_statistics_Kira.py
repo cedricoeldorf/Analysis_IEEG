@@ -444,8 +444,6 @@ mean of absolute slopes of raw amplitudes, mean (abs(dx/dt)) - slope_MEAN
 """
     vertices = vertices[ind]
     vertices_lag = shift(vertices, -1, cval=1)
-    mean = signal.mean()
-    amplitude = signal - mean
     signal = signal[ind]
     signal_lag = shift(signal, -1, cval=0)
     slope_amplitude = abs(signal / signal_lag)
