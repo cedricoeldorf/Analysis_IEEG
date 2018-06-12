@@ -2,7 +2,7 @@ from load_raw import load_raw
 import numpy as np
 from itertools import islice
 from multiprocessing import Pool, Manager, cpu_count
-
+from extract_statistics import *
 ''' ############################################################################
 ## Seprate leads
 ########################################################################### '''
@@ -181,14 +181,19 @@ def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, i
 ## EX
 ########################################################################### '''
 
-# patient_data = load_raw('raw_FAC002')
+patient_data = load_raw('raw_FAC002')
 
-# patient_data = segments_patient(patient_data, 200, overlap=False)
+patient_data = segments_patient(patient_data, 200, overlap=False)
 
-# eeg_m = patient_data['eeg_m']
-# eeg_p = patient_data['eeg_p']
-# y_m = patient_data['simVecM']
-# y_p = patient_data['simVecP']
+eeg_m = patient_data['eeg_m']
+eeg_p = patient_data['eeg_p']
+y_m = patient_data['simVecM']
+y_p = patient_data['simVecP']
+
+binned_m = extract_multithreaded_basic(eeg_m)
+with open('./eeg_slplit/bin_mem.pkl', 'wb') as f:
+	pickle.dump(binned_m, f)
+
 #
 # separation_mem = separate_leads(eeg_m)
 # separation_perc = separate_leads(eeg_p)
@@ -196,7 +201,7 @@ def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, i
 # perc_leads = []
 # n_leads_m = len(separation_mem)
 # n_leads_p = len(separation_perc)
-# bin_size = 40
+# bin_size = 800
 # overlap_size = 15
 # for i in range(n_leads_m):
 # 	mem_leads.append(segment_lead_matrix(separation_mem[i], bin_size, overlap=True))
