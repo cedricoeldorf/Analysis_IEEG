@@ -442,19 +442,22 @@ ____________________________________________
 12. mean of curvatures (d2x/dt2) at vertices (already done by Rico????)
 mean of absolute slopes of raw amplitudes, mean (abs(dx/dt)) - slope_MEAN
 """
+
     vertices = vertices[ind]
     vertices_lag = shift(vertices, -1, cval=1)
     mean = signal.mean()
-    amplitude = signal - mean
-    raw_amplitude = raw_apmlitude[ind]
+    raw_amplitude = signal - mean
+    #raw_amplitude = amplitude[ind]
     raw_amplitude_lag = shift(raw_amplitude, -1, cval=0)
-    slope_amplitude = abs(raw_amplitude / raw_amplitude_lag)
+    slope_amplitude = abs(raw_amplitude[:-1] / raw_amplitude_lag[:-1])
     slope_MEAN = slope_amplitude.mean()
     slope_SD = slope_amplitude.std()
     CV_slope_amplitude = slope_SD / slope_MEAN
-    slope_v2v = abs(vertices / vertices_lag)
+    slope_v2v = abs(vertices[:-1] / vertices_lag[:-1])
     MEAN_v2v_slope = slope_v2v.mean()
     SD_v2v_slope = slope_v2v.std()
     CV_v2v_slope = SD_v2v_slope / MEAN_v2v_slope
+
+
 
     return np.array([slope_SD, CV_slope_amplitude, MEAN_v2v_slope, SD_v2v_slope, CV_v2v_slope])
