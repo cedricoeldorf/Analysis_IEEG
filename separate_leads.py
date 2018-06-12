@@ -1,133 +1,12 @@
-import scipy.io as sio
-import pickle
+from load_raw import load_raw
 import numpy as np
-import matplotlib.pyplot as plt
-import os
-
-''' ############################################################################
-## Load raw
-########################################################################### '''
-
-def load_raw(patient_name):
-	preprocessed_location = 'preprocessed/'
-	# find all the patients that have to be read in...
-	preprocessed_dir = next(os.walk(preprocessed_location))[1]
-	patients = []
-	for dir in preprocessed_dir:
-		if 'raw_' in dir:
-			patients.append(dir)
-	print('{} patient(s) detected'.format(len(patients)))
-
-	if len(patients) != 0 and not os.path.exists(preprocessed_location + 'pickle/eegMem_{}.pkl'.format(patient_name)):
-		print('creating pickle for all patients...')
-		try:
-			os.mkdir(preprocessed_location + 'pickle/')
-		except:
-			pass
-		# create the data for these patients...
-		# patient_data = []
-		for i, patient in enumerate(patients): # loop over patients
-			print(patient)
-			patient_dir = preprocessed_location + patient
-			patient_data = {}
-			mem_dir= patient_dir + '/memory/'
-			perc_dir = patient_dir + '/perception/'
-			list_o_leads = np.array(os.listdir(mem_dir)) # loop over leads
-			lead_name = 'eeg_m' # key for memory eegs
-			y_name = 'simVecM' # key for memory y values
-			for l in list_o_leads:
-				if '_chan_' in l: # read in lead
-					mat_contents = sio.loadmat(mem_dir + l)
-					eeg = mat_contents['eeg']
-					if lead_name not in patient_data:
-						patient_data[lead_name] = []
-					patient_data[lead_name].append(eeg)
-				elif '_simVec' in l: # read in the y values
-					mat_contents = sio.loadmat(mem_dir + l)
-					y_vec = mat_contents[y_name]
-					patient_data[y_name] = y_vec
-
-			list_o_leads = np.array(os.listdir(perc_dir))  # loop over leads
-			lead_name = 'eeg_p'  # key for perception eegs
-			y_name = 'simVecP'  # key for perception y values
-			for l in list_o_leads:
-				if '_chan_' in l:  # read in lead
-					mat_contents = sio.loadmat(perc_dir + l)
-					eeg = mat_contents['eeg']
-					# print(patient, l, eeg.shape)
-					if lead_name not in patient_data:
-						patient_data[lead_name] = []
-					patient_data[lead_name].append(eeg)
-				elif '_simVec' in l:  # read in the y values
-					mat_contents = sio.loadmat(perc_dir + l)
-					y_vec = mat_contents[y_name]
-					patient_data[y_name] = y_vec
-		# Now patient data contains all the information we need
-			patient_data['eeg_m'] = np.array(patient_data['eeg_m'])
-			patient_data['eeg_p'] = np.array(patient_data['eeg_p'])
-			if 'simVecM' in patient_data:
-				patient_data['simVecM'] = np.array(patient_data['simVecM'])
-				patient_data['simVecP'] = np.array(patient_data['simVecP'])
-			with open(preprocessed_location + 'pickle/eegMem_{}.pkl'.format(patient), 'wb') as f:
-				pickle.dump(patient_data['eeg_m'], f)
-			with open(preprocessed_location + 'pickle/eegPerc_{}.pkl'.format(patient), 'wb') as f:
-				pickle.dump(patient_data['eeg_p'], f)
-			if 'simVecM' in patient_data:
-				with open(preprocessed_location + 'pickle/simMem_{}.pkl'.format(patient), 'wb') as f:
-					pickle.dump(patient_data['simVecM'], f)
-				with open(preprocessed_location + 'pickle/simPerc_{}.pkl'.format(patient), 'wb') as f:
-					pickle.dump(patient_data['simVecP'], f)
-
-	patient_data = {}
-
-	patient = patient_name
-	print('loading patient {}'.format(patient))
-
-	with open(preprocessed_location + 'pickle/eegMem_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['eeg_m'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/eegPerc_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['eeg_p'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/simMem_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['simVecM'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/simPerc_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['simVecP'] = pickle.load(f)
-
-	'''
-		patient_data = contains all the data for patient X
-
-		patient_data['eeg_m'] = all the memory eeg leads
-		patient_data['eeg_p'] = all the perc eeg leads
-
-		patient_data['simVecM'] # all the memory y values
-		patient_data['simVecP'] # all the perception y values
-	'''
-	return patient_data
-
-''' ############################################################################
-## Load pickle
-########################################################################### '''
-
-def load_pickle(patient_name):
-
-	patient_data = {}
-	preprocessed_location = 'preprocessed/'
-	patient = patient_name
-	print('loading patient {}'.format(patient))
-
-	with open(preprocessed_location + 'pickle/eegMem_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['eeg_m'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/eegPerc_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['eeg_p'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/simMem_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['simVecM'] = pickle.load(f)
-	with open(preprocessed_location + 'pickle/simPerc_raw_{}.pkl'.format(patient), 'rb') as f:
-		patient_data['simVecP'] = pickle.load(f)
-
-	return patient_data
+from itertools import islice
+from multiprocessing import Pool, Manager, cpu_count
 
 ''' ############################################################################
 ## Seprate leads
 ########################################################################### '''
+
 
 def separate_leads(data):
 	n_leads = data.shape[0]
@@ -136,9 +15,11 @@ def separate_leads(data):
 		lead_list.append(data[i])
 	return lead_list
 
+
 ''' ############################################################################
 ## Find bin size
 ########################################################################### '''
+
 
 def find_bin_size(length):
 	list = []
@@ -147,9 +28,17 @@ def find_bin_size(length):
 			list.append(i)
 	return list
 
+
+def find_best_bin_size(size, bin):
+	for i in range(bin, 1, -1):
+		if size % i == 0:
+			return i
+	return None
+
 ''' ############################################################################
 ## Find overlap size
 ########################################################################### '''
+
 
 def find_overlap_size(length, window):
 	list = []
@@ -160,34 +49,87 @@ def find_overlap_size(length, window):
 			list.append(i)
 	return list
 
+
 ''' ############################################################################
 ## Segment trials
 ########################################################################### '''
 
-def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_size=10, include_last_window=True):
 
+def execute(args):
+	signal, queue, bin_size, overlap, overlap_step, lead, trial = args[0], args[1], args[2], args[3], args[4], args[5], args[6]
+	if overlap:
+		splitted = np.array(list(zip(*[islice(signal, i * overlap_step, None) for i in range(bin_size)])))
+	else:
+		splitted = np.split(signal, int(len(signal) / bin_size))
+	queue.put((lead, trial, bin_size, overlap, overlap_step, splitted))
+
+
+def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
+	n_leads = eeg.shape[0]
+	n_trials = eeg.shape[1]
+	tasks = []
+	pool = Pool(cpu_count())
+	manager = Manager()
+	queue = manager.Queue()
+
+	for trial in range(n_trials):
+		for lead in range(n_leads):
+			signal = eeg[lead][trial]
+			tasks.append([signal, queue, bin_size, overlap, overlap_step, lead, trial])
+	pool.map(execute, tasks)  # create the results
+	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+	while not queue.empty():
+		(lead, trial, bin_size, overlap, overlap_step, splitted) = queue.get()
+		result_eeg[lead][trial] = splitted
+	result_eeg = np.array(result_eeg)
+	return result_eeg
+
+
+## For single threaded use...
+def segment_eeg(eeg, bin_size, overlap, overlap_step):
+	n_leads = eeg.shape[0]
+	n_trials = eeg.shape[1]
+	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+	if overlap:
+		for trial in range(n_trials):
+			for lead in range(n_leads):
+				signal = eeg[lead][trial]
+				splitted = np.array(list(zip(*[islice(signal, i*overlap_step, None) for i in range(bin_size)])))
+				result_eeg[lead][trial] = splitted
+	else:
+		for trial in range(n_trials):
+			for lead in range(n_leads):
+				signal = eeg[lead][trial]
+				# if len(signal) % bin_size != 0:
+				# 	raise Exception('Wrong bin size {} for lead'.format(bin_size), lead, 'and trial', trial)
+				splitted = np.split(signal, int(len(signal)/bin_size))
+				result_eeg[lead][trial] = splitted
+	result_eeg = np.array(result_eeg)
+	return result_eeg
+
+
+def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50, multithreaded=False):
+	"""
+	bin_size : the size of the bins for windowing, if it doensn't divide nicely it doesn't crash but just have approx equal sized bins
+	overlap : whether the bins should overlap
+	overlap_step : how big a step for the overlap
+	multithreaded : whether to use multi threading
+	"""
+
+	if multithreaded:
+		patient_data['eeg_m'] = segment_multithreaded_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step)
+		patient_data['eeg_p'] = segment_multithreaded_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
+	else:
+		patient_data['eeg_m'] = segment_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step)
+		patient_data['eeg_p'] = segment_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
+	return patient_data
+
+
+def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, include_last_window=True):
 	n_trials = lead_matrix.shape[0]
 	trial_length = lead_matrix.shape[1]
 
-	if overlap == False:
-		if trial_length % bin_size != 0 or bin_size > trial_length:
-			print('Wrong bin size, try:')
-			print(find_bin_size(trial_length))
-			return
-		step_size = int(trial_length / bin_size)
-		step_size = bin_size
-		lead_list = []
-		for trial in range(n_trials):
-			bin = []
-			i = 0
-			for j in range(trial_length/bin_size)):
-				segment = lead_matrix[trial][i:i+step_size]
-				bin.append(segment)
-				i += step_size
-			lead_list.append(bin)
-		return lead_list
-
-	if overlap == True:
+	if overlap:
 		step_size = int(trial_length / bin_size)
 		lead_list = []
 		for trial in range(n_trials):
@@ -198,31 +140,52 @@ def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_size=10, i
 					if include_last_window:
 						bin.append(lead_matrix[trial][i:])
 					break
-				segment = lead_matrix[trial][i:i+bin_size]
+				segment = lead_matrix[trial][i:i + bin_size]
 				bin.append(segment)
-				i = i + (bin_size - overlap_size)
+				i = i + (bin_size - overlap_step)
 			lead_list.append(bin)
-		return lead_list
+	else:
+		if trial_length % bin_size != 0 or bin_size > trial_length:
+			print('Wrong bin size, try:')
+			print(find_bin_size(trial_length))
+			return
+		step_size = int(trial_length / bin_size)
+		step_size = bin_size
+		lead_list = []
+		for trial in range(n_trials):
+			bin = []
+			i = 0
+			for j in range(trial_length / bin_size):
+				segment = lead_matrix[trial][i:i + step_size]
+				bin.append(segment)
+				i += step_size
+			lead_list.append(bin)
+
+	return lead_list
+
 
 ''' ############################################################################
 ## EX
 ########################################################################### '''
 
-patient_data = load_pickle('FAC002')
-eeg_m = patient_data['eeg_m']
-eeg_p = patient_data['eeg_p']
-y_m = patient_data['simVecM']
-y_p = patient_data['simVecP']
+# patient_data = load_raw('raw_FAC002')
 
-separation_mem = separate_leads(eeg_m)
-separation_perc = separate_leads(eeg_p)
-mem_leads = []
-perc_leads = []
-n_leads_m = len(separation_mem)
-n_leads_p = len(separation_perc)
-bin_size = 40
-overlap_size = 15
-for i in range(n_leads_m):
-	mem_leads.append(segment_lead_matrix(separation_mem[i], bin_size, overlap=True))
-for i in range(n_leads_p):
-	perc_leads.append(segment_lead_matrix(separation_perc[i], bin_size))
+# patient_data = segments_patient(patient_data, 200, overlap=False)
+
+# eeg_m = patient_data['eeg_m']
+# eeg_p = patient_data['eeg_p']
+# y_m = patient_data['simVecM']
+# y_p = patient_data['simVecP']
+#
+# separation_mem = separate_leads(eeg_m)
+# separation_perc = separate_leads(eeg_p)
+# mem_leads = []
+# perc_leads = []
+# n_leads_m = len(separation_mem)
+# n_leads_p = len(separation_perc)
+# bin_size = 40
+# overlap_size = 15
+# for i in range(n_leads_m):
+# 	mem_leads.append(segment_lead_matrix(separation_mem[i], bin_size, overlap=True))
+# for i in range(n_leads_p):
+# 	perc_leads.append(segment_lead_matrix(separation_perc[i], bin_size))

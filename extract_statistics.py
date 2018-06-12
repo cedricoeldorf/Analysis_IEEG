@@ -3,7 +3,7 @@ from scipy.signal import savgol_filter
 from scipy.stats import variation
 from scipy.ndimage.interpolation import shift
 import peakutils, time
-from multiprocessing import Pool, Manager, cpu_count, Queue
+from multiprocessing import Pool, Manager, cpu_count
 
 
 ####################################
@@ -12,23 +12,51 @@ from multiprocessing import Pool, Manager, cpu_count, Queue
 
 
 def extract_multithreaded_basic(X):
-	pool = Pool(cpu_count())
+	binned = len(X.shape) == 4
+	n_leads = X.shape[0]
+	n_trials = X.shape[1]
 
+	pool = Pool(cpu_count())
 	m = Manager()
+
 	queue = m.Queue()  # create queue to save all the results
 	tasks = []
-	for trial in range(0, X.shape[1]):
-		for lead in range(0, X.shape[0]):
-			signal = X[lead][trial]
-			tasks.append([signal, queue, lead, trial])  # create tasks for the processes to finish
+	if binned:
+		print('binned features!')
+		n_bins = X.shape[2]
+		result_features = [[[[] for _ in range(n_bins)] for _ in range(n_trials)] for _ in range(n_leads)]
+		for trial in range(n_trials):
+			for lead in range(n_leads):
+				for bin in range(n_bins):
+					part = X[lead][trial][bin]
+					tasks.append([part, queue, lead, trial, bin])
+	else:
+		print('normal features!')
+		result_features = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+
+		for trial in range(n_trials):
+			for lead in range(n_leads):
+				signal = X[lead][trial]
+				tasks.append([signal, queue, lead, trial, -1])  # create tasks for the processes to finish
 
 	pool.map(execute, tasks)  # create the results
-	return queue
+
+	if binned:
+		while not queue.empty():
+			lead, trial, bin, features, feature_names = queue.get()
+			result_features[lead][trial][bin] = features
+	else:
+		while not queue.empty():
+			lead, trial, bin, features, feature_names = queue.get()
+			result_features[lead][trial] = features
+
+	result_features = np.array(result_features)
+	return result_features, feature_names
 
 
 def execute(args):
-	signal, queue, lead, trial = args[0], args[1], args[2], args[3]
-	p = 50  # for generalized mean
+	p = 50
+	signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]
 	features = np.array([])
 	feature_names = np.array([])
 	peaks, valleys, signal_smooth = create_vertex2vertex(signal, spacing=10, seperate_peaks_valleys=True)
@@ -59,10 +87,10 @@ def execute(args):
 	feature_names = np.append(feature_names, np.array(['generalized_mean']))
 	features = np.append(features, PAA(signal))
 	feature_names = np.append(feature_names, np.array(['PAA']))
-	features = np.append(features, absolute_slopes_features(vertices, signal_smooth))
+	features = np.append(features, absolute_slopes_features(signal, vertices, signal_smooth))
 	feature_names = np.append(feature_names, np.array(['slope_SD', 'CV_slope_amplitude', 'MEAN_v2v_slope', 'SD_v2v_slope', 'CV_v2v_slope']))
 	# print('trial {} lead {} done'.format(trial, lead))
-	queue.put((lead, trial, features, feature_names))
+	queue.put((lead, trial, bin, features, feature_names))
 
 def extract_basic(X):
 	print("extracting basics")
