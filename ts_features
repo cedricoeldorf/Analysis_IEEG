@@ -1,0 +1,156 @@
+import numpy as np
+from scipy.signal import savgol_filter
+from scipy.stats import variation
+from scipy.ndimage.interpolation import shift
+import peakutils, time
+import tsfresh.feature_extraction.feature_calculators as ts
+
+
+# ts features 1
+def TS_features(signal):
+
+    energy = ts.abs_energy(signal)
+    abs_sum = ts.absolute_sum_of_changes(signal)
+    above_mean = ts.count_above_mean(signal)
+    below_mean = ts.count_below_mean(signal)
+    first_max_location = ts.first_location_of_maximum(signal)
+    first_min_location = ts.first_location_of_minimum(signal)
+
+    return energy,abs_sum, above_mean, below_mean,first_max_location, first_min_location
+
+# ts features
+def TS_features2(signal):
+    duplicate = ts.has_duplicate(signal) # t.f
+    duplicate_max = ts.has_duplicate_max(signal) # t.f
+    duplicate_min = ts.has_duplicate_min(signal) # t.f
+    kurtosis = ts.kurtosis(signal)
+    longest_strike_above = ts.longest_strike_above_mean(signal)
+    longest_strike_below = ts.longest_strike_below_mean(signal)
+
+    return kurtosis,longest_strike_above,longest_strike_below
+
+# ts features
+def TS_feature3(signal):
+    max_ts = ts.maximum(signal)
+    mean_rs = ts.mean(signal)
+    mean_abs_change = ts.mean_abs_change(signal)
+    mean_change = ts.mean_change(signal)
+    median_ts = ts.median(signal)
+    minimum_ts = ts.minimum(signal)
+
+    return max_ts,mean_rs,mean_abs_change,mean_change,median_ts,minimum_ts
+
+# ts features with param
+# param_ts =
+# def TS_features4(signal, param_ts):
+#
+#
+#     agg_coorelation = ts.agg_autocorrelation(signal, param_ts)
+#     linear_trend = ts.agg_linear_trend(signal, param_ts)
+#     coeffi = ts.ar_coefficient(signal,param_ts)
+#     dicky = ts.augmented_dickey_fuller(signal, param_ts)
+#
+#     cwt_coeffi = ts.cwt_coefficients(signal,param_ts)
+#     fried = ts.friedrich_coefficients(signal,param_ts)
+#     mass_quant = ts.index_mass_quantile(signal,param_ts)
+#
+#
+#     return agg_coorelation,linear_trend, coeffi, dicky, cwt_coeffi,fried,mass_quant
+
+# ts features with
+mts = 2
+rts = 6
+def TS_features5(signal, mts, rts):
+
+    entropy = ts.approximate_entropy(signal, mts, rts)
+    max_langevin = ts.max_langevin_fixed_point(signal,mts,rts)
+
+
+    return entropy, max_langevin
+
+def TS_features6(signal,rts):
+    length_ts = ts.length(signal)
+
+    return length_ts
+# ts features with lags
+
+
+lag_ts = 203  # lag is a number
+def TS_feature7(signal,lag_ts):
+
+    autocorelation = ts.autocorrelation(signal,lag_ts)
+    value_c3 = ts.c3(signal, lag_ts)
+
+    return autocorelation, value_c3,
+
+
+cross_point = 0,
+def TS_feature8(signal,cross_point):
+
+    number_cross = ts.number_crossing_m(signal,cross_point)
+
+    return number_cross
+
+
+# def TS_features9(signal,peaks):
+# 
+#     number_of_peaks = ts.number_cwt_peaks(signal,peaks)
+#     number_peaks = ts.number_peaks(signal, peaks)
+# 
+#     return number_of_peaks, number_peaks
+
+
+# def TS_features10(signal,param_ts):
+#
+#     partial_autocorrelation = ts.partial_autocorrelation(signal,param_ts)
+#     spkt_w_density = ts.spkt_welch_density(signal, param_ts)
+#     symmetry = ts.symmetry_looking(signal, param_ts)
+#
+#     return partial_autocorrelation, spkt_w_density, symmetry
+
+
+
+def TS_features11(signal):
+    percentage_of_reoccurring = ts.percentage_of_reoccurring_datapoints_to_all_datapoints(signal)
+    percentage_of_reoccurring_values = ts.percentage_of_reoccurring_values_to_all_values(signal)
+    ratio_value_number = ts.ratio_value_number_to_time_series_length(signal)
+    sample_entropy = ts.sample_entropy(signal)
+    skewness = ts.skewness(signal)
+
+    return percentage_of_reoccurring, percentage_of_reoccurring_values, ratio_value_number, sample_entropy, skewness
+
+def TS_features12(signal):
+    stand_deviation = ts.standard_deviation(signal)
+    sum_reoccurring = ts.sum_of_reoccurring_data_points(signal)
+    sum_r_value = ts.sum_of_reoccurring_values(signal)
+    sum_v =ts.sum_values(signal)
+    variance = ts.variance(signal)
+    variance_larger_than_sd = ts.variance_larger_than_standard_deviation(signal)
+
+    return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance,
+
+
+def TS_feature13(signal,min,max):
+
+    range_count = ts.range_count(signal,min,max) #
+
+    return range_count
+
+# def TS_feature14(key,value):
+#     key =0.1
+#     value = 0.5
+#     set_property = ts.set_property(key,value)
+#     value_count = ts.value_count(signal,value)
+#     return set_property, value_count
+
+# def TS_feature15(signal, max_bins):
+#
+#     binned_entropy = ts.binned_entropy(signal, max_bins)
+#
+#     return binned_entropy
+
+# def TS_feature16(signal,ql,qh,isabs,f_agg):
+#
+#     change_quantiles = ts.change_quantiles(signal,ql,qh,isabs,f_agg)
+#
+#     return change_quantiles
