@@ -449,7 +449,8 @@ mean of absolute slopes of raw amplitudes, mean (abs(dx/dt)) - slope_MEAN
     raw_amplitude = signal - mean
     #raw_amplitude = amplitude[ind]
     raw_amplitude_lag = shift(raw_amplitude, -1, cval=0)
-    slope_amplitude = abs(raw_amplitude[:-1] / raw_amplitude_lag[:-1])
+    #slope_amplitude = abs(raw_amplitude[:-1] / raw_amplitude_lag[:-1])
+    slope_amplitude = abs(raw_amplitude / raw_amplitude_lag)
     slope_MEAN = slope_amplitude.mean()
     slope_SD = slope_amplitude.std()
     CV_slope_amplitude = slope_SD / slope_MEAN
