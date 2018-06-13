@@ -4,7 +4,8 @@ import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import os
-
+from scipy.signal import butter, lfilter, filtfilt
+import scipy
 
 def load_raw(patient_name):
 	preprocessed_location = 'preprocessed/'
@@ -90,14 +91,66 @@ def load_raw(patient_name):
 
 	'''
 		patient_data = contains all the data for patient X
-	
+
 		patient_data['eeg_m'] = all the memory eeg leads
 		patient_data['eeg_p'] = all the perc eeg leads
-	
+
 		patient_data['simVecM'] # all the memory y values
 		patient_data['simVecP'] # all the perception y values
 	'''
 	return patient_data
+
+
+''' ############################################################################
+## Filter signal
+############################################################################ '''
+
+def lowpass(data, cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    y = lfilter(b, a, data)
+    return y
+
+def highpass(data, cutoff, fs, order=5):
+    nyq = 0.5 * fs
+    normal_cutoff = cutoff / nyq
+    b, a = signal.butter(order, normal_cutoff, btype='high', analog=False)
+    y = signal.filtfilt(b, a, data)
+    return y
+
+def filter_signal(data, LOW, HIGH, fs, order=5):
+    y = lowpass(data, HIGH, fs, order=order)
+    y = highpass(y, LOW, fs, order=order)
+    return y
+
+# ''' ############################################################################
+# ## Test filtering on sine wave
+# ############################################################################ '''
+#
+# n_samples = 4400
+# 
+#
+# fs = 2000.0
+# T = n_samples / fs
+# t = np.linspace(0, T, n_samples, endpoint=False)
+# LOW = 4
+# HIGH = 9
+#
+# x = np.sin(2 * np.pi * 4 * t)
+# x += np.sin(2 * np.pi * 9 * t)
+# x += np.sin(2 * np.pi * 90 * t)
+# x += np.sin(2 * np.pi * 3 * t)
+# n=[np.random.randint(100)/10 for i in range(len(t))]
+# x+=n
+#
+# xx =  np.sin(2 * np.pi * 4 * t) + np.sin(2 * np.pi * 9 * t)
+#
+# y = filter_signal(x, LOW, HIGH, fs)
+#
+# plt.plot(t, xx, 'b')
+# plt.plot(t, y, 'r')
+# plt.show()
 
 
 # eeg_mem = patient_data['eeg_m']
