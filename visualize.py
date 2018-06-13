@@ -46,14 +46,33 @@ def plot_feature_importance(X, feature_names):
     ax = [pylab.subplot(n_rows, n_cols, v) for v in range(1, n_features+1)]
     for i in range(n_features):
         for j in range(n_leads):
-            ax[i].bar(j, X[j][i])
-            ax[i].set_title(feature_names[i])
+            ax[i].set_ylim(0, 1)
+            if X[j][i] >= 0.4 and X[j][i] <= 0.6:
+                ax[i].bar(j, 0)
+            else:
+                ax[i].bar(j, X[j][i])
+            ax[i].set_title(feature_names[i][:5])
             ax[i].spines['top'].set_color('none')
             ax[i].spines['right'].set_color('none')
             if (i+1) % n_cols != 0:
                 ax[i+1].spines['left'].set_color('none')
                 ax[i+1].axes.get_yaxis().set_visible(False)
+    plt.tight_layout()
     plt.show()
+
+''' ############################################################################
+## Find expressive lead+feature pairs
+########################################################################### '''
+
+def find_expressive_pairs(X, feature_names, LOW=0.1, HIGH=0.9):
+    n_features = X.shape[1]
+    n_leads = X.shape[0]
+    pair_list = []
+    for i in range(n_leads):
+        for j in range(n_features):
+            if X[i][j] <= LOW or X[i][j] >= HIGH:
+                pair_list.append(['L:', i, 'F:', j, 'val:', X[i][j], 'name:', feature_names[j]])
+    return pair_list
 
 ''' ############################################################################
 ## EX
@@ -63,8 +82,7 @@ m = 0.1
 b = 0
 n_windows = 10
 threshold = 1
-
-n_feat = 15
+n_feat = 35
 
 labels = ['feature' + str(i) for i in range(1, n_feat+1)]
 
