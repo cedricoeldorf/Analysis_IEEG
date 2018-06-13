@@ -56,7 +56,7 @@ def extract_multithreaded_basic(X):
 	return result_features, feature_names
 
 
-ts_features = True
+ts_features = False
 
 
 def execute(args):
@@ -159,7 +159,7 @@ def extract_basic(X):
 			'''
 			print(vertices) the positions in smoothed signal that were selected as vertices
 			print(smoothed_signal[vertices]) the corresponding value for these positions
-			
+
 			########
 			## mean
 			small.append(signal.mean())

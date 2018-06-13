@@ -7,6 +7,8 @@ import numpy as np
 from scipy import stats
 from copy import deepcopy
 from multiprocessing import Pool, Manager, cpu_count, Queue
+import pickle
+from load_raw import load_raw
 target = [0,1,0,1,0,1,1,0,1,0]
 feature_names = ['f1','f2','f3']
 #############3
@@ -20,23 +22,28 @@ feature_names = ['f1','f2','f3']
 ## Start with array that has n features in k segments
 
 
-def get_slopes(feature_names):
+def get_slopes(data, feature_names):
     #for every lead
-
+    data = np.nan_to_num(data)
+    data = data.reshape(data.shape[0],data.shape[1],data.shape[3],data.shape[2])
     slopes = []
-    for i in range(125):
+    # LEAD
+    for i in range(data.shape[0]):
         # for every trial
+        # TRIAL
         trial_slopes = []
-        for j in range(10):
+        for j in range(data.shape[1]):
             # 3 faetures in 9 segments
-            features = np.asarray([[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)],[np.random.uniform(-1,1, size = 3)]])
-            features = features.T
-            n_features = len(features)
 
+            n_features = data.shape[3]
+
+            ## FEATURE
             slope = []
-            for k in range(n_features):
-                f = features[k].ravel()
-                x = list(range(len(f)))
+            for k in range(data.shape[2]):
+
+                ## FEATURE
+                f = data[i][j][k].ravel()
+                x = list(range(n_features))
                 m,b = np.polyfit(x, f, 1)
                 slope.append(m)
             trial_slopes.append(slope)
@@ -48,6 +55,8 @@ def get_slopes(feature_names):
 def average_slope(slopes, feature_names, removal = False, bottom_thresh = 0, top_thresh = 0):
     # INCOMPLETE
     mean_slopes = []
+
+    # LEAD
     for z in range(len(slopes)):
 
         # take lead, transpose in order to compare every target
@@ -67,9 +76,10 @@ def average_slope(slopes, feature_names, removal = False, bottom_thresh = 0, top
             print("MAX: " + str(temp_slopes[i].max()))
             index = []
             if (temp_slopes[i].min() > bottom_thresh) and (temp_slopes[i].max() < top_thresh):
-                final_slopes = np.delete(final_slopes, i, 0)
+
                 index.append(i)
-        del feature_names[i]
+        final_slopes = np.delete(final_slopes, index, 0)
+        final_slopes = np.delete(feature_names, index, 0)
         mean_slopes = deepcopy(final_slopes)
 
     return mean_slopes, feature_names
@@ -103,7 +113,16 @@ def get_importances(slopes,target, feature_names):
         importance.append(acc)
     return importance
 
-slopes = get_slopes(feature_names)
+with open('./preprocessed/eeg_split/bin_mem.pkl', 'rb') as f:
+	eeg_m =	pickle.load(f)
+
+feature_names = eeg_m[1]
+eeg_m = eeg_m[0]
+patient_data = load_raw('raw_FAC002')
+target = patient_data['simVecM'][0:eeg_m.shape[1]]
+del patient_data
+
+slopes = get_slopes(eeg_m, feature_names)
 s = deepcopy(slopes)
 mean_slope, feature_names = average_slope(s, feature_names, removal = True, bottom_thresh = -0.1, top_thresh = 0.1)
 print(feature_names)
@@ -134,7 +153,7 @@ def extract_multithreaded_basic(X):
 
 
 def execute(args):
-	f, n_feat, queue = args[0], args[1], args[2]
+    f, n_feat, queue = args[0], args[1], args[2]
     x = list(range(0,n_feat))
-	m,b = np.polyfit(x, f, 1)
-	queue.put((m, b))
+    m,b = np.polyfit(x, f, 1)
+    queue.put((m, b))
