@@ -1,7 +1,7 @@
 #################################
 ## Measuring Feature importance by slope/target correlation
 ##################################
-from extract_statistics import *
+#from extract_statistics import *
 from sklearn.metrics import accuracy_score
 import numpy as np
 from scipy import stats
@@ -9,151 +9,144 @@ from copy import deepcopy
 from multiprocessing import Pool, Manager, cpu_count, Queue
 import pickle
 from load_raw import load_raw
-target = [0,1,0,1,0,1,1,0,1,0]
-feature_names = ['f1','f2','f3']
-#############3
-# We have a lead. All trials, in each trial split into time segments
-# first: get features of every time segment: for trial, for segment, append
-# get: a list of features in a list of segments for each trial
+import os
+import tqdm
 
 
-## This is one time segmented array of features (one lead)
-## Run this for a specific lead over all trials
-## Start with array that has n features in k segments
-
-
-def get_slopes(data, feature_names):
-    #for every lead
-    data = np.nan_to_num(data)
-    data = data.reshape(data.shape[0],data.shape[1],data.shape[3],data.shape[2])
-    slopes = []
-    # LEAD
-    for i in range(data.shape[0]):
-        # for every trial
-        # TRIAL
-        trial_slopes = []
-        for j in range(data.shape[1]):
-            # 3 faetures in 9 segments
-
-            n_features = data.shape[3]
-
-            ## FEATURE
-            slope = []
-            for k in range(data.shape[2]):
-
-                ## FEATURE
-                f = data[i][j][k].ravel()
-                x = list(range(n_features))
-                m,b = np.polyfit(x, f, 1)
-                slope.append(m)
-            trial_slopes.append(slope)
-
-        #print(trial_slopes[0])
-        slopes.append(trial_slopes)
-    return slopes
-
-def average_slope(slopes, feature_names, removal = False, bottom_thresh = 0, top_thresh = 0):
-    # INCOMPLETE
-    mean_slopes = []
-
-    # LEAD
-    for z in range(len(slopes)):
-
-        # take lead, transpose in order to compare every target
-        slopes[z] = np.asarray(slopes[z]).T
-        sl = []
-        for x in range(len(slopes[z])):
-            av_sl = slopes[z][x].mean()
-            sl.append(av_sl)
-        mean_slopes.append(sl)
-
-    if removal == True:
-        final_slopes = deepcopy(mean_slopes)
-        temp_slopes = deepcopy(mean_slopes)
-        temp_slopes = np.asarray(temp_slopes).T
-        for i in range(len(temp_slopes)):
-            print("MIN: " + str(temp_slopes[i].min()))
-            print("MAX: " + str(temp_slopes[i].max()))
-            index = []
-            if (temp_slopes[i].min() > bottom_thresh) and (temp_slopes[i].max() < top_thresh):
-
-                index.append(i)
-        final_slopes = np.delete(final_slopes, index, 0)
-        final_slopes = np.delete(feature_names, index, 0)
-        mean_slopes = deepcopy(final_slopes)
-
-    return mean_slopes, feature_names
-
-def get_importances(slopes,target, feature_names):
+def get_importances(slopes,target):
 
     #############################
     ## Get coherence with target
     #############################
-    for i in range(len(slopes)):
-        for j in range(len(slopes[i])):
-            for x in range(len(slopes[i][j])):
-                if slopes[i][j][x] < 0:
-                    slopes[i][j][x] = 0
-                else:
-                    slopes[i][j][x] = 1
+    slopes = slopes.reshape(slopes.shape[0],slopes.shape[2],slopes.shape[1])
 
+    for lead in range(slopes.shape[0]):
+        for feature in range(slopes.shape[1]):
+            for trial in range(slopes.shape[2]):
+                if slopes[lead][feature][trial] < 0:
+                    slopes[lead][feature][trial] = -1
+                else:
+                    slopes[lead][feature][trial] = 1
 
     importance = []
     # iterate over leads
-    for z in range(len(slopes)):
-        # take lead, transpose in order to compare every target
-        slopes[z] = np.asarray(slopes[z]).T
-        # now, for every feature, get accuracy
+    for z in range(slopes.shape[0]):
         acc = []
-        for x in range(len(slopes[z])):
+        for x in range(slopes.shape[1]):
+
             acc.append(accuracy_score(target,slopes[z][x]))
 
-        #print(len(acc))
-        #print(importance)
         importance.append(acc)
+
     return importance
+
+'''######################################
+## attempt to multithread get_slopes function '''
+
+def multithread_slope_extraction(X):
+
+    pool = Pool(cpu_count())
+
+    m = Manager()
+    queue = m.Queue()  # create queue to save all the results
+    tasks = []
+    X = np.nan_to_num(X)
+    X = X.reshape(X.shape[0],X.shape[1],X.shape[3],X.shape[2])
+
+
+    n_features = X.shape[3]
+    slopes = [[[[] for _ in range(X.shape[2])] for _ in range(X.shape[1])] for _ in range(X.shape[0])]
+
+    x = list(range(n_features))
+    for lead in range(X.shape[0]):
+        for trial in range(X.shape[1]):
+            for feature in range(X.shape[2]):
+
+                    f = X[lead][trial][feature].ravel()
+                    tasks.append([f, x, queue, lead, trial, feature])
+    print(len(tasks))
+    pool.map(execute_slope, tasks)  # create the results
+    for _ in tqdm.tqdm(pool.imap_unordered(execute_slope, tasks), total=len(tasks)):
+        pass
+    while not queue.empty():
+        slope,lead, trial, feature = queue.get()
+        slopes[lead][trial][feature] = slope
+    slopes = np.array(slopes)
+    return slopes
+
+def multithread_average_slope(X, removal = False, bottom_thresh = 0, top_thresh = 0):
+
+    pool = Pool(cpu_count())
+    m = Manager()
+    queue = m.Queue()  # create queue to save all the results
+    tasks = []
+
+    # LEAD
+    X = X.reshape(X.shape[0],X.shape[2],X.shape[1])
+    avs = [[[] for _ in range(X.shape[1])] for _ in range(X.shape[0])]
+    for lead in range(X.shape[0]):
+        # take lead, transpose in order to compare every target
+
+        for feature in range(len(X[lead])):
+            x = X[lead][feature]
+            tasks.append([x, queue, lead, feature])
+
+    pool.map(execute_average, tasks)  # create the results
+    for _ in tqdm.tqdm(pool.imap_unordered(execute_average, tasks), total=len(tasks)):
+        pass
+    while not queue.empty():
+        av, lead, feature = queue.get()
+        avs[lead][feature] = av
+    avs = np.array(avs)
+    return avs
+
+def execute_average(args):
+    x, queue, lead, feature = args[0], args[1], args[2],args[3]
+    av = x.mean()
+    queue.put((av, lead, feature ))
+
+
+def execute_slope(args):
+    f, x, queue, lead, trial, feature = args[0], args[1], args[2],args[3], args[4], args[5]
+    m,b = np.polyfit(x, f, 1)
+    queue.put((m,lead, trial, feature ))
+
+
+##############################################
+## RUN
+##############################################
 
 with open('./preprocessed/eeg_split/bin_mem.pkl', 'rb') as f:
 	eeg_m =	pickle.load(f)
-
 feature_names = eeg_m[1]
 eeg_m = eeg_m[0]
 patient_data = load_raw('raw_FAC002')
 target = patient_data['simVecM'][0:eeg_m.shape[1]]
 del patient_data
 
-slopes = get_slopes(eeg_m, feature_names)
-s = deepcopy(slopes)
-mean_slope, feature_names = average_slope(s, feature_names, removal = True, bottom_thresh = -0.1, top_thresh = 0.1)
-print(feature_names)
-s = deepcopy(slopes)
-important = get_importances(s,target, feature_names)
+###########
+## GET SLOPES
+q = multithread_slope_extraction(eeg_m)
 
+if not os.path.exists('./preprocessed/eeg_split'):
+    os.makedirs('./preprocessed/eeg_split')
+with open('./preprocessed/eeg_split/slopes_eeg_m.pkl', 'wb') as f:
+	pickle.dump(q, f)
 
-'''######################################
-## attempt to multithread get_slopes function '''
+s = deepcopy(q)
+d = deepcopy(q)
+del q
 
-def extract_multithreaded_basic(X):
-    pool = Pool(cpu_count())
+###########
+## GET AVERAGE SLOPES
+a = multithread_average_slope(s)
+if not os.path.exists('./preprocessed/eeg_split'):
+    os.makedirs('./preprocessed/eeg_split')
+with open('./preprocessed/eeg_split/average_slopes_eeg_m.pkl', 'wb') as f:
+	pickle.dump(a, f)
 
-    m = Manager()
-    queue = m.Queue()  # create queue to save all the results
-
-    tasks = []
-    for lead in range(X.shape[0]):
-        for trial in range(X.shape[1]):
-            for segment in range(X.shape[2]):
-                for feature in range(X.shape[3]):
-                    n_feat = X.shape[3]
-                    feat = segment.T[feature]
-                    tasks.append([feat, n_feat, queue])
-    print(len(tasks))
-    pool.map(execute, tasks)  # create the results
-    return queue
-
-
-def execute(args):
-    f, n_feat, queue = args[0], args[1], args[2]
-    x = list(range(0,n_feat))
-    m,b = np.polyfit(x, f, 1)
-    queue.put((m, b))
+###########
+## GET SLOPE CORRELATION TO TARGET
+important = get_importances(d,target)
+with open('./preprocessed/eeg_split/important_slopes_eeg_m.pkl', 'wb') as f:
+	pickle.dump(important, f)

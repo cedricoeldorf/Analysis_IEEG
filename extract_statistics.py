@@ -5,7 +5,7 @@ from scipy.ndimage.interpolation import shift
 import peakutils, time
 from multiprocessing import Pool, Manager, cpu_count
 import tsfresh.feature_extraction.feature_calculators as ts
-
+import tqdm
 
 ####################################
 ## Extract statistics for every lead and create AV table
@@ -42,7 +42,8 @@ def extract_multithreaded_basic(X):
 				tasks.append([signal, queue, lead, trial, -1])  # create tasks for the processes to finish
 	print('start creating features...')
 	pool.map(execute, tasks)  # create the results
-
+	for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+		pass
 	if binned:
 		while not queue.empty():
 			lead, trial, bin, features, feature_names = queue.get()
@@ -56,7 +57,7 @@ def extract_multithreaded_basic(X):
 	return result_features, feature_names
 
 
-ts_features = False
+ts_features = True
 
 
 def execute(args):

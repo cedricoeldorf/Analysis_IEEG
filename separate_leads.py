@@ -194,9 +194,9 @@ y_m = patient_data['simVecM']
 y_p = patient_data['simVecP']
 
 eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
-eeg_m = eeg_m[0:5]
+eeg_m = eeg_m[0:10]
 eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
-eeg_m = eeg_m[0:3]
+eeg_m = eeg_m[0:10]
 binned_m = extract_multithreaded_basic(eeg_m)
 
 if not os.path.exists('./preprocessed/eeg_split'):
