@@ -115,8 +115,8 @@ def lowpass(data, cutoff, fs, order=5):
 def highpass(data, cutoff, fs, order=5):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
-    b, a = signal.butter(order, normal_cutoff, btype='high', analog=False)
-    y = signal.filtfilt(b, a, data)
+    b, a = butter(order, normal_cutoff, btype='high', analog=False)
+    y = filtfilt(b, a, data)
     return y
 
 def filter_signal(data, LOW, HIGH, fs, order=5):
@@ -130,7 +130,7 @@ def filter_signal(data, LOW, HIGH, fs, order=5):
 # ############################################################################ '''
 #
 # n_samples = 4400
-# 
+#
 #
 # fs = 2000.0
 # T = n_samples / fs
