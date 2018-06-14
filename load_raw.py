@@ -123,6 +123,7 @@ def filter_signal(data, LOW, HIGH, fs, order=5):
     y = lowpass(data, HIGH, fs, order=order)
     y = highpass(y, LOW, fs, order=order)
     return y
+#looks like fire
 
 # ''' ############################################################################
 # ## Test filtering on sine wave
