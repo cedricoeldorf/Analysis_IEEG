@@ -1,12 +1,10 @@
 import scipy.io as sio
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 from scipy.signal import butter, lfilter, filtfilt
-import scipy
-from multiprocessing import Pool, Manager, cpu_count, Queue
-import tqdm
+from multiprocessing import Pool, Manager, cpu_count
+import tqdm, psutil
 
 
 theta = [4, 9]
@@ -188,6 +186,11 @@ def loop(eeg, filter, multithreaded=False, queue=None):
 
 
 def execute(args):
+	try:
+		p = psutil.Process(os.getpid())
+		p.nice(10)  # set
+	except:
+		pass
 	signal, queue, lead, trial, bin, filter = args[0], args[1], args[2], args[3], args[4], args[5]
 	signal = filter_signal(signal, filter)
 	queue.put((lead, trial, bin, signal))
@@ -214,7 +217,6 @@ def extract_frequency(patient_data, freq_band_m='theta', freq_band_p='alpha', mu
 		patient_data['eeg_m'] = np.array(result_features)
 
 		print('done with memory signal extraction...')
-		queue.close()
 		del queue
 		queue = m.Queue()
 		tasks = loop(patient_data['eeg_p'], alpha, multithreaded=multithreaded, queue=queue)
@@ -232,7 +234,6 @@ def extract_frequency(patient_data, freq_band_m='theta', freq_band_p='alpha', mu
 				result_features[lead][trial] = signal
 		patient_data['eeg_p'] = np.array(result_features)
 		print('done with perception signal extraction...')
-		queue.close()
 		pool.close()
 		pool.join()
 		del pool, queue, m, tasks

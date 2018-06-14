@@ -68,8 +68,11 @@ def extract_multithreaded_basic(X, n_jobs=-1):
 
 
 def execute(args):
-	p = psutil.Process(os.getpid())
-	p.nice(10)  # set
+	try:
+		p = psutil.Process(os.getpid())
+		p.nice(10)  # set
+	except:
+		pass
 	# tic = time.time()
 	p = 50
 	signal, queue, lead, trial, bin = args[0], args[1], args[2], args[3], args[4]

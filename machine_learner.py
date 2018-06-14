@@ -1,17 +1,11 @@
-import pickle
-import numpy as np
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import cross_val_score, GridSearchCV, KFold
-from extract_statistics import extract_basic
-from sklearn.svm import SVC
-from sklearn.neural_network import MLPClassifier
-import xgboost as xgb
-from sklearn.feature_selection import RFE
-from collections import Counter
-import matplotlib.pyplot as plt
-import pandas as pd, time
-from extract_statistics import *
+# from sklearn.neighbors import KNeighborsClassifier
+# from sklearn.ensemble import RandomForestClassifier
+# from sklearn.model_selection import cross_val_score, GridSearchCV, KFold
+# from sklearn.svm import SVC
+# from sklearn.neural_network import MLPClassifier
+# import xgboost as xgb
+# from sklearn.feature_selection import RFE
+# from collections import Counter
 from load_raw import *
 from separate_leads import *
 
@@ -131,6 +125,8 @@ def xgboost():
 		patient_data['simVecM'] # all the memory y values shape = T trials
 		patient_data['simVecP'] # all the perception y values shape = T trials
 '''
+
+
 def main():
 	##############
 	### params ###
@@ -163,7 +159,7 @@ def main():
 	if segment_patient_data:
 		patient_data = segments_patient(patient_data, bin_size=bin_size, overlap=with_overlap, overlap_step=overlap_step_size, multithreaded=use_multithreading_if_available)
 		print('done segmenting ')
-		
+
 	if extract_frequency_data:
 		patient_data = extract_frequency(patient_data, frequency_band_mem, frequency_band_perc, multithreaded=use_multithreading_if_available)
 		print('done extracting frequency bands')

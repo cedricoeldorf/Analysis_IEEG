@@ -1,7 +1,4 @@
-import numpy as np
 from itertools import islice
-from multiprocessing import Pool, Manager, cpu_count
-import os, psutil
 from extract_statistics import *
 import pickle
 import os
@@ -67,8 +64,11 @@ def window(signal, window_size=4, step_size=2):
 
 
 def execute(args):
-	p = psutil.Process(os.getpid())
-	p.nice(10)  # set
+	try:
+		p = psutil.Process(os.getpid())
+		p.nice(10)  # set
+	except:
+		pass
 
 	signal, queue, bin_size, overlap, overlap_step, lead, trial = args[0], args[1], args[2], args[3], args[4], args[5], args[6]
 	if overlap:
