@@ -7,6 +7,9 @@ from multiprocessing import Pool, Manager, cpu_count
 import tsfresh.feature_extraction.feature_calculators as ts
 import os, psutil
 import tqdm
+import warnings
+
+warnings.filterwarnings("ignore")
 
 ####################################
 ## Extract statistics for every lead and create AV table
