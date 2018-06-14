@@ -204,28 +204,28 @@ def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, i
 ## EX
 ########################################################################### '''
 
-from load_raw import load_raw
-
-input("Hit enter to create binned sample data")
-patient_data = load_raw('raw_FAC002')
-
-patient_data = segments_patient(patient_data, 200, overlap=False)
-
-eeg_m = patient_data['eeg_m']
-eeg_p = patient_data['eeg_p']
-y_m = patient_data['simVecM']
-y_p = patient_data['simVecP']
-
-eeg_m = eeg_m.reshape(eeg_m.shape[1], eeg_m.shape[0], 22, 200)
-eeg_m = eeg_m[0:10]
-eeg_m = eeg_m.reshape(eeg_m.shape[1], eeg_m.shape[0], 22, 200)
-eeg_m = eeg_m[0:10]
-binned_m = extract_multithreaded_basic(eeg_m)
-
-if not os.path.exists('./preprocessed/eeg_split'):
-	os.makedirs('./preprocessed/eeg_split')
-with open('./preprocessed/eeg_split/bin_mem.pkl', 'wb') as f:
-	pickle.dump(binned_m, f)
+# from load_raw import load_raw
+#
+# input("Hit enter to create binned sample data")
+# patient_data = load_raw('raw_FAC002')
+#
+# patient_data = segments_patient(patient_data, 200, overlap=False)
+#
+# eeg_m = patient_data['eeg_m']
+# eeg_p = patient_data['eeg_p']
+# y_m = patient_data['simVecM']
+# y_p = patient_data['simVecP']
+#
+# eeg_m = eeg_m.reshape(eeg_m.shape[1], eeg_m.shape[0], 22, 200)
+# eeg_m = eeg_m[0:10]
+# eeg_m = eeg_m.reshape(eeg_m.shape[1], eeg_m.shape[0], 22, 200)
+# eeg_m = eeg_m[0:10]
+# binned_m = extract_multithreaded_basic(eeg_m)
+#
+# if not os.path.exists('./preprocessed/eeg_split'):
+# 	os.makedirs('./preprocessed/eeg_split')
+# with open('./preprocessed/eeg_split/bin_mem.pkl', 'wb') as f:
+# 	pickle.dump(binned_m, f)
 
 #
 # separation_mem = separate_leads(eeg_m)
