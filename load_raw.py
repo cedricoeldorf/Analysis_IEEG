@@ -1,8 +1,11 @@
+from __future__ import division
 import scipy.io as sio
 import pickle
 import numpy as np
+import matplotlib.pyplot as plt
 import os
 from scipy.signal import butter, lfilter, filtfilt
+import scipy
 
 theta = [4, 9]
 beta = [14, 28]
@@ -96,8 +99,10 @@ def load_raw(patient_name):
 
 	'''
 		patient_data = contains all the data for patient X
+
 		patient_data['eeg_m'] = all the memory eeg leads
 		patient_data['eeg_p'] = all the perc eeg leads
+
 		patient_data['simVecM'] # all the memory y values
 		patient_data['simVecP'] # all the perception y values
 	'''

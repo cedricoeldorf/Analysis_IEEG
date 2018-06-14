@@ -6,6 +6,7 @@ import peakutils, time
 from multiprocessing import Pool, Manager, cpu_count
 import tsfresh.feature_extraction.feature_calculators as ts
 import os, psutil
+import tqdm
 
 ####################################
 ## Extract statistics for every lead and create AV table
@@ -42,7 +43,9 @@ def extract_multithreaded_basic(X, n_jobs=-1):
 				signal = X[lead][trial]
 				tasks.append([signal, queue, lead, trial, -1])  # create tasks for the processes to finish
 	print('start creating features...')
-	pool.map(execute, tasks)  # create the results
+
+	for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+		pass
 	print('start filling...')
 	if binned:
 		while not queue.empty():
