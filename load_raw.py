@@ -1,4 +1,3 @@
-from __future__ import division
 import scipy.io as sio
 import pickle
 import numpy as np
@@ -97,6 +96,7 @@ def load_raw(patient_name):
 	with open(preprocessed_location + 'pickle/simPerc_{}.pkl'.format(patient), 'rb') as f:
 		patient_data['simVecP'] = pickle.load(f)
 
+
 	'''
 		patient_data = contains all the data for patient X
 
@@ -115,10 +115,7 @@ def load_raw(patient_name):
 
 
 def differencing(x):
-	out = []
-	for i in range(len(x) - 1):
-		out.append(x[i + 1] - x[i])
-	return np.array(out)
+	return np.diff(x)
 
 
 def lowpass(data, cutoff, fs, order=5):
@@ -142,6 +139,63 @@ def filter_signal(data, band, fs=2000.0, order=5):
 	y = lowpass(data, band[1], fs, order=order)
 	y = highpass(y, band[0], fs, order=order)
 	return y
+
+
+def loop(eeg, filter):
+	if len(eeg.shape) == 4:
+		n_leads = eeg.shape[0]
+		n_trials = eeg.shape[1]
+		n_bins = eeg.shape[2]
+		result_features = [[[[] for _ in range(n_bins)] for _ in range(n_trials)] for _ in range(n_leads)]
+		for lead in range(n_leads):
+			for trial in range(n_trials):
+				for bin in range(n_bins):
+					signal = eeg[lead][trial][bin]
+					result_features[lead][trial][bin] = filter_signal(signal, filter)
+	else:
+		n_leads = eeg.shape[0]
+		n_trials = eeg.shape[1]
+		result_features = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+		for lead in range(n_leads):
+			for trial in range(n_trials):
+					signal = eeg[lead][trial]
+					result_features[lead][trial] = filter_signal(signal, filter)
+	return np.array(result_features)
+
+
+def extract_frequency(patient_data, freq_band_m='theta', freq_band_p='alpha'):
+	if freq_band_m == 'theta':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], theta)
+	elif freq_band_m == 'beta':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], beta)
+	elif freq_band_m == 'alpha':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], alpha)
+	elif freq_band_m == 'delta':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], delta)
+	elif freq_band_m == 'low_gamma':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], low_gamma)
+	elif freq_band_m == 'high_gamma':
+		patient_data['eeg_m'] = loop(patient_data['eeg_m'], high_gamma)
+	else:
+		raise Exception('invalid freq band for mem!')
+
+	if freq_band_p == 'theta':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], theta)
+	elif freq_band_p == 'beta':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], beta)
+	elif freq_band_p == 'alpha':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], alpha)
+	elif freq_band_p == 'delta':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], delta)
+	elif freq_band_p == 'low_gamma':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], low_gamma)
+	elif freq_band_p == 'high_gamma':
+		patient_data['eeg_p'] = loop(patient_data['eeg_p'], high_gamma)
+	else:
+		raise Exception('invalid freq band for perc!')
+
+	return patient_data
+
 
 # eeg_mem = patient_data['eeg_m']
 #

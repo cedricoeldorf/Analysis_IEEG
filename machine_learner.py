@@ -12,7 +12,7 @@ from collections import Counter
 import matplotlib.pyplot as plt
 import pandas as pd, time
 from extract_statistics import *
-from load_raw import load_raw
+from load_raw import *
 
 np.random.seed(0)
 
@@ -141,6 +141,7 @@ def main():
 
 	# from separate_leads import segments_patient  # import the function
 	# patient_data = segments_patient(patient_data, bin_size=880, overlap=False, overlap_step=220, multithreaded=True)
+	patient_data = extract_frequency(patient_data, 'theta', 'alpha')
 
 	features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
 	pickle.dump((features, feature_names), open('preprocessed/pickle/binned_ts_features_002_m.pkl', 'wb'))

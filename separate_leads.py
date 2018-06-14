@@ -157,6 +157,7 @@ def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50,
 	else:
 		patient_data['eeg_m'] = segment_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step)
 		patient_data['eeg_p'] = segment_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
+
 	return patient_data
 
 
