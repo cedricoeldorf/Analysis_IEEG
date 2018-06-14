@@ -1,7 +1,7 @@
-from load_raw import load_raw
 import numpy as np
 from itertools import islice
 from multiprocessing import Pool, Manager, cpu_count
+import os, psutil
 
 ''' ############################################################################
 ## Seprate leads
@@ -64,21 +64,25 @@ def window(signal, window_size=4, step_size=2):
 
 
 def execute(args):
+	p = psutil.Process(os.getpid())
+	p.nice(10)  # set
+
 	signal, queue, bin_size, overlap, overlap_step, lead, trial = args[0], args[1], args[2], args[3], args[4], args[5], args[6]
 	if overlap:
-
 		splitted = window(signal, bin_size, overlap_step)
 	else:
 		splitted = np.array(np.split(signal, int(len(signal) / bin_size)))
 	queue.put((lead, trial, bin_size, overlap, overlap_step, splitted))
 
 
-def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
+def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step, n_jobs=-1):
 	n_leads = eeg.shape[0]
 	n_trials = eeg.shape[1]
 	tasks = []
-	# pool = Pool(4)
-	pool = Pool(cpu_count())
+	if n_jobs == -1:
+		pool = Pool(cpu_count())
+	else:
+		pool = Pool(n_jobs)
 	manager = Manager()
 	queue = manager.Queue()
 
@@ -93,35 +97,50 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step):
 		(lead, trial, bin_size, overlap, overlap_step, splitted) = queue.get()
 		result_eeg[lead][trial] = splitted
 	result_eeg = np.array(result_eeg)
-	del queue, pool, manager
+	pool.close()
+	pool.join()
 	# print(result_eeg.shape)
 	return result_eeg
 
 
 ## For single threaded use...
-def segment_eeg(eeg, bin_size, overlap, overlap_step):
+def segment_eeg(eeg, bin_size, overlap, overlap_step, separate_bands=False):
 	n_leads = eeg.shape[0]
 	n_trials = eeg.shape[1]
-	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
-	if overlap:
-		for trial in range(n_trials):
-			for lead in range(n_leads):
-				signal = eeg[lead][trial]
-				splitted = np.array(list(zip(*[islice(signal, i * overlap_step, None) for i in range(bin_size)])))
-				result_eeg[lead][trial] = splitted
+	if separate_bands:
+		# result_eeg = [[[[] for _ in range(len(eeg_bands))] for _ in range(n_trials)] for _ in range(n_leads)]
+		print('not implemented')
 	else:
-		for trial in range(n_trials):
-			for lead in range(n_leads):
-				signal = eeg[lead][trial]
-				# if len(signal) % bin_size != 0:
-				# 	raise Exception('Wrong bin size {} for lead'.format(bin_size), lead, 'and trial', trial)
-				splitted = np.split(signal, int(len(signal) / bin_size))
-				result_eeg[lead][trial] = splitted
+		result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+	if overlap:
+		if separate_bands:
+			for trial in range(n_trials):
+				for lead in range(n_leads):
+					print('not implemented')
+		else:
+			for trial in range(n_trials):
+				for lead in range(n_leads):
+					signal = eeg[lead][trial]
+					splitted = np.array(list(zip(*[islice(signal, i * overlap_step, None) for i in range(bin_size)])))
+					result_eeg[lead][trial] = splitted
+	else:
+		if separate_bands:
+			for trial in range(n_trials):
+				for lead in range(n_leads):
+					print('not implemented')
+		else:
+			for trial in range(n_trials):
+				for lead in range(n_leads):
+					signal = eeg[lead][trial]
+					# if len(signal) % bin_size != 0:
+					# 	raise Exception('Wrong bin size {} for lead'.format(bin_size), lead, 'and trial', trial)
+					splitted = np.split(signal, int(len(signal) / bin_size))
+					result_eeg[lead][trial] = splitted
 	result_eeg = np.array(result_eeg)
 	return result_eeg
 
 
-def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50, multithreaded=False):
+def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50, multithreaded=False, n_jobs=-1):
 	"""
 	bin_size : the size of the bins for windowing, if it doensn't divide nicely it doesn't crash but just have approx equal sized bins
 	overlap : whether the bins should overlap
@@ -130,8 +149,8 @@ def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50,
 	"""
 
 	if multithreaded:
-		patient_data['eeg_m'] = segment_multithreaded_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step)
-		patient_data['eeg_p'] = segment_multithreaded_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
+		patient_data['eeg_m'] = segment_multithreaded_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step, n_jobs)
+		patient_data['eeg_p'] = segment_multithreaded_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step, n_jobs)
 	else:
 		patient_data['eeg_m'] = segment_eeg(patient_data['eeg_m'], bin_size, overlap, overlap_step)
 		patient_data['eeg_p'] = segment_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
