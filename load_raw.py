@@ -5,6 +5,9 @@ import matplotlib.pyplot as plt
 import os
 from scipy.signal import butter, lfilter, filtfilt
 import scipy
+from multiprocessing import Pool, Manager, cpu_count, Queue
+import tqdm
+
 
 theta = [4, 9]
 beta = [14, 28]
@@ -141,58 +144,130 @@ def filter_signal(data, band, fs=2000.0, order=5):
 	return y
 
 
-def loop(eeg, filter):
-	if len(eeg.shape) == 4:
-		n_leads = eeg.shape[0]
-		n_trials = eeg.shape[1]
-		n_bins = eeg.shape[2]
-		result_features = [[[[] for _ in range(n_bins)] for _ in range(n_trials)] for _ in range(n_leads)]
-		for lead in range(n_leads):
-			for trial in range(n_trials):
-				for bin in range(n_bins):
-					signal = eeg[lead][trial][bin]
-					result_features[lead][trial][bin] = filter_signal(signal, filter)
+def loop(eeg, filter, multithreaded=False, queue=None):
+	if multithreaded:
+		tasks = []
+		if len(eeg.shape) == 4:
+			n_leads = eeg.shape[0]
+			n_trials = eeg.shape[1]
+			n_bins = eeg.shape[2]
+			for lead in range(n_leads):
+				for trial in range(n_trials):
+					for bin in range(n_bins):
+						signal = eeg[lead][trial][bin]
+						tasks.append([signal, queue, lead, trial, bin, filter])
+						# result_features[lead][trial][bin] = filter_signal(signal, filter)
+		else:
+			n_leads = eeg.shape[0]
+			n_trials = eeg.shape[1]
+			for lead in range(n_leads):
+				for trial in range(n_trials):
+						signal = eeg[lead][trial]
+						tasks.append([signal, queue, lead, trial, -1, filter])
+		return tasks
 	else:
-		n_leads = eeg.shape[0]
-		n_trials = eeg.shape[1]
-		result_features = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
-		for lead in range(n_leads):
-			for trial in range(n_trials):
-					signal = eeg[lead][trial]
-					result_features[lead][trial] = filter_signal(signal, filter)
-	return np.array(result_features)
+		if len(eeg.shape) == 4:
+			n_leads = eeg.shape[0]
+			n_trials = eeg.shape[1]
+			n_bins = eeg.shape[2]
+			result_features = [[[[] for _ in range(n_bins)] for _ in range(n_trials)] for _ in range(n_leads)]
+			for lead in range(n_leads):
+				for trial in range(n_trials):
+					for bin in range(n_bins):
+						signal = eeg[lead][trial][bin]
+						result_features[lead][trial][bin] = filter_signal(signal, filter)
+		else:
+			n_leads = eeg.shape[0]
+			n_trials = eeg.shape[1]
+			result_features = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+			for lead in range(n_leads):
+				for trial in range(n_trials):
+						signal = eeg[lead][trial]
+						result_features[lead][trial] = filter_signal(signal, filter)
+		return np.array(result_features)
 
 
-def extract_frequency(patient_data, freq_band_m='theta', freq_band_p='alpha'):
-	if freq_band_m == 'theta':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], theta)
-	elif freq_band_m == 'beta':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], beta)
-	elif freq_band_m == 'alpha':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], alpha)
-	elif freq_band_m == 'delta':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], delta)
-	elif freq_band_m == 'low_gamma':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], low_gamma)
-	elif freq_band_m == 'high_gamma':
-		patient_data['eeg_m'] = loop(patient_data['eeg_m'], high_gamma)
-	else:
-		raise Exception('invalid freq band for mem!')
+def execute(args):
+	signal, queue, lead, trial, bin, filter = args[0], args[1], args[2], args[3], args[4], args[5]
+	signal = filter_signal(signal, filter)
+	queue.put((lead, trial, bin, signal))
 
-	if freq_band_p == 'theta':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], theta)
-	elif freq_band_p == 'beta':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], beta)
-	elif freq_band_p == 'alpha':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], alpha)
-	elif freq_band_p == 'delta':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], delta)
-	elif freq_band_p == 'low_gamma':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], low_gamma)
-	elif freq_band_p == 'high_gamma':
-		patient_data['eeg_p'] = loop(patient_data['eeg_p'], high_gamma)
+
+def extract_frequency(patient_data, freq_band_m='theta', freq_band_p='alpha', multithreaded=True):
+	if multithreaded:
+		pool = Pool(cpu_count())
+		m = Manager()
+		queue = m.Queue()
+		tasks = loop(patient_data['eeg_m'], theta, multithreaded=multithreaded, queue=queue)
+		for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+			pass
+		if len(patient_data['eeg_m'].shape) == 4:
+			result_features = [[[[] for _ in range(patient_data['eeg_m'].shape[2])] for _ in range(patient_data['eeg_m'].shape[1])] for _ in range(patient_data['eeg_m'].shape[0])]
+			while not queue.empty():
+				lead, trial, bin, signal = queue.get()
+				result_features[lead][trial][bin] = signal
+		else:
+			result_features = [[[] for _ in range(patient_data['eeg_m'].shape[1])] for _ in range(patient_data['eeg_m'].shape[0])]
+			while not queue.empty():
+				lead, trial, bin, signal = queue.get()
+				result_features[lead][trial] = signal
+		patient_data['eeg_m'] = np.array(result_features)
+
+		print('done with memory signal extraction...')
+		queue.close()
+		del queue
+		queue = m.Queue()
+		tasks = loop(patient_data['eeg_p'], alpha, multithreaded=multithreaded, queue=queue)
+		for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+			pass
+		if len(patient_data['eeg_p'].shape) == 4:
+			result_features = [[[[] for _ in range(patient_data['eeg_p'].shape[2])] for _ in range(patient_data['eeg_p'].shape[1])] for _ in range(patient_data['eeg_p'].shape[0])]
+			while not queue.empty():
+				lead, trial, bin, signal = queue.get()
+				result_features[lead][trial][bin] = signal
+		else:
+			result_features = [[[] for _ in range(patient_data['eeg_p'].shape[1])] for _ in range(patient_data['eeg_p'].shape[0])]
+			while not queue.empty():
+				lead, trial, bin, signal = queue.get()
+				result_features[lead][trial] = signal
+		patient_data['eeg_p'] = np.array(result_features)
+		print('done with perception signal extraction...')
+		queue.close()
+		pool.close()
+		pool.join()
+		del pool, queue, m, tasks
 	else:
-		raise Exception('invalid freq band for perc!')
+		if freq_band_m == 'theta':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], theta)
+		elif freq_band_m == 'beta':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], beta)
+		elif freq_band_m == 'alpha':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], alpha)
+		elif freq_band_m == 'delta':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], delta)
+		elif freq_band_m == 'low_gamma':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], low_gamma)
+		elif freq_band_m == 'high_gamma':
+			patient_data['eeg_m'] = loop(patient_data['eeg_m'], high_gamma)
+		else:
+			raise Exception('invalid freq band for mem!')
+		print('done with memory signal extraction...')
+
+		if freq_band_p == 'theta':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], theta)
+		elif freq_band_p == 'beta':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], beta)
+		elif freq_band_p == 'alpha':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], alpha)
+		elif freq_band_p == 'delta':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], delta)
+		elif freq_band_p == 'low_gamma':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], low_gamma)
+		elif freq_band_p == 'high_gamma':
+			patient_data['eeg_p'] = loop(patient_data['eeg_p'], high_gamma)
+		else:
+			raise Exception('invalid freq band for perc!')
+		print('done with perception signal extraction...')
 
 	return patient_data
 

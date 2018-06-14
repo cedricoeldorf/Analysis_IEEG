@@ -128,7 +128,6 @@ def main():
 	# print('max:',np.max(ac))
 	# print('min:',np.min(ac))
 	# return
-	patient_data = load_raw('raw_FAC002')
 	'''
 			patient_data = contains all the data for patient X
 
@@ -140,14 +139,40 @@ def main():
 	'''
 
 	from separate_leads import segments_patient  # import the function
-	patient_data = segments_patient(patient_data, bin_size=880, overlap=False, overlap_step=220, multithreaded=True)
+	##############
+	### params ###
+	##############
+	patient = 'raw_FAC002'
+	segment_patient_data = True
+	bin_size = 880
+	with_overlap = False
+	overlap_step_size = 220
+	use_multithreading_if_available = True
+	extract_frequency_data = True
+	frequency_band_mem = 'theta'
+	frequency_band_perc = 'alpha'
+	#####################
+	### end of params ###
+	#####################
 
-	patient_data = extract_frequency(patient_data, 'theta', 'alpha')
+	patient_data = load_raw(patient)
+	if segment_patient_data:
+			patient_data = segments_patient(patient_data, bin_size=bin_size, overlap=with_overlap, overlap_step=overlap_step_size, multithreaded=use_multithreading_if_available)
+			print('done segmenting...')
+	if extract_frequency_data:
+		patient_data = extract_frequency(patient_data, frequency_band_mem, frequency_band_perc, multithreaded=use_multithreading_if_available)
+		print('done extracting frequency bands')
 
-	features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
-	pickle.dump((features, feature_names), open('preprocessed/pickle/binned_ts_features_002_m.pkl', 'wb'))
-	features, feature_names = extract_multithreaded_basic(patient_data['eeg_p'])
-	pickle.dump((features, feature_names), open('preprocessed/pickle/binned_ts_features_002_p.pkl', 'wb'))
+	if use_multithreading_if_available:
+		features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
+	else:
+		features, feature_names = extract_basic(patient_data['eeg_m'])
+	pickle.dump((features, feature_names), open('preprocessed/pickle/features_mem_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient, segment_patient_data, bin_size, with_overlap, overlap_step_size, frequency_band_mem, frequency_band_perc), 'wb'))
+	if use_multithreading_if_available:
+		features, feature_names = extract_multithreaded_basic(patient_data['eeg_p'])
+	else:
+		features, feature_names = extract_basic(patient_data['eeg_p'])
+	pickle.dump((features, feature_names), open('preprocessed/pickle/features_perc_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient, segment_patient_data, bin_size, with_overlap, overlap_step_size, frequency_band_mem, frequency_band_perc), 'wb'))
 	# features, feature_names = pickle.load(open('preprocessed/pickle/norm_features_002_m.pkl', 'rb'))
 
 	# accuracies = [0 for _ in range(features.shape[0])]

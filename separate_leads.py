@@ -93,7 +93,8 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step, n_jobs=-1):
 		for lead in range(n_leads):
 			signal = eeg[lead][trial]
 			tasks.append([signal, queue, bin_size, overlap, overlap_step, lead, trial])
-	pool.map(execute, tasks)  # create the results
+	for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+		pass
 	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
 	del tasks
 	while not queue.empty():
