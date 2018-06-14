@@ -118,37 +118,39 @@ def execute_slope(args):
 ## RUN
 ##############################################
 
-with open('./preprocessed/eeg_split/bin_mem.pkl', 'rb') as f:
-	eeg_m = pickle.load(f)
-feature_names = eeg_m[1]
-eeg_m = eeg_m[0]
-patient_data = load_raw('raw_FAC002')
-target = patient_data['simVecM'][0:eeg_m.shape[1]]
-del patient_data
+filenames = ['binned_all_features_002_m.pkl','binned_all_features_002_p.pkl']
+for filename in filenames:
+    with open('./preprocessed/eeg_split/' + filename, 'rb') as f:
+    	eeg_m =	pickle.load(f)
+    feature_names = eeg_m[1]
+    eeg_m = eeg_m[0]
+    patient_data = load_raw('raw_FAC002')
+    target = patient_data['simVecM'][0:eeg_m.shape[1]]
+    del patient_data
 
-###########
-## GET SLOPES
-q = multithread_slope_extraction(eeg_m)
+    ###########
+    ## GET SLOPES
+    q = multithread_slope_extraction(eeg_m)
 
-if not os.path.exists('./preprocessed/eeg_split'):
-	os.makedirs('./preprocessed/eeg_split')
-with open('./preprocessed/eeg_split/slopes_eeg_m.pkl', 'wb') as f:
-	pickle.dump(q, f)
+    if not os.path.exists('./preprocessed/eeg_split'):
+        os.makedirs('./preprocessed/eeg_split')
+    with open('./preprocessed/eeg_split/slopes_' + filename +'.pkl', 'wb') as f:
+    	pickle.dump(q, f)
 
-s = deepcopy(q)
-d = deepcopy(q)
-del q
+    s = deepcopy(q)
+    d = deepcopy(q)
+    del q
 
-###########
-## GET AVERAGE SLOPES
-a = multithread_average_slope(s)
-if not os.path.exists('./preprocessed/eeg_split'):
-	os.makedirs('./preprocessed/eeg_split')
-with open('./preprocessed/eeg_split/average_slopes_eeg_m.pkl', 'wb') as f:
-	pickle.dump(a, f)
+    ###########
+    ## GET AVERAGE SLOPES
+    a = multithread_average_slope(s)
+    if not os.path.exists('./preprocessed/eeg_split'):
+        os.makedirs('./preprocessed/eeg_split')
+    with open('./preprocessed/eeg_split/average_slopes_' + filename +'.pkl', 'wb') as f:
+    	pickle.dump(a, f)
 
-###########
-## GET SLOPE CORRELATION TO TARGET
-important = get_importances(d, target)
-with open('./preprocessed/eeg_split/important_slopes_eeg_m.pkl', 'wb') as f:
-	pickle.dump(important, f)
+    ###########
+    ## GET SLOPE CORRELATION TO TARGET
+    important = get_importances(d,target)
+    with open('./preprocessed/eeg_split/important_slopes_' + filename +'.pkl', 'wb') as f:
+    	pickle.dump(important, f)
