@@ -7,6 +7,13 @@ import os
 from scipy.signal import butter, lfilter, filtfilt
 import scipy
 
+theta = [4, 9]
+beta = [14, 28]
+alpha = [9, 14]
+delta = [2, 4]
+low_gamma = [28, 48]
+high_gamma = [48, 90]
+
 def load_raw(patient_name):
 	preprocessed_location = 'preprocessed/'
 	# find all the patients that have to be read in...
@@ -105,6 +112,12 @@ def load_raw(patient_name):
 ## Filter signal
 ############################################################################ '''
 
+def differencing(x):
+	out = []
+	for i in range(len(x) - 1):
+		out.append(x[i+1] - x[i])
+	return np.array(out)
+
 def lowpass(data, cutoff, fs, order=5):
     nyq = 0.5 * fs
     normal_cutoff = cutoff / nyq
@@ -119,39 +132,13 @@ def highpass(data, cutoff, fs, order=5):
     y = filtfilt(b, a, data)
     return y
 
-def filter_signal(data, LOW, HIGH, fs, order=5):
-    y = lowpass(data, HIGH, fs, order=order)
-    y = highpass(y, LOW, fs, order=order)
+def filter_signal(data, band, fs=2000.0, order=5):
+	data = differencing(data)
+    y = lowpass(data, band[1], fs, order=order)
+    y = highpass(y, band[0], fs, order=order)
     return y
-#looks like fire
 
-# ''' ############################################################################
-# ## Test filtering on sine wave
-# ############################################################################ '''
-#
-# n_samples = 4400
-#
-#
-# fs = 2000.0
-# T = n_samples / fs
-# t = np.linspace(0, T, n_samples, endpoint=False)
-# LOW = 4
-# HIGH = 9
-#
-# x = np.sin(2 * np.pi * 4 * t)
-# x += np.sin(2 * np.pi * 9 * t)
-# x += np.sin(2 * np.pi * 90 * t)
-# x += np.sin(2 * np.pi * 3 * t)
-# n=[np.random.randint(100)/10 for i in range(len(t))]
-# x+=n
-#
-# xx =  np.sin(2 * np.pi * 4 * t) + np.sin(2 * np.pi * 9 * t)
-#
-# y = filter_signal(x, LOW, HIGH, fs)
-#
-# plt.plot(t, xx, 'b')
-# plt.plot(t, y, 'r')
-# plt.show()
+
 
 
 # eeg_mem = patient_data['eeg_m']
