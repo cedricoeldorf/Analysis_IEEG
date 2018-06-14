@@ -1,9 +1,15 @@
-from __future__ import division
 import scipy.io as sio
 import pickle
 import numpy as np
-import matplotlib.pyplot as plt
 import os
+from scipy.signal import butter, lfilter, filtfilt
+
+theta = [4, 9]
+beta = [14, 28]
+alpha = [9, 14]
+delta = [2, 4]
+low_gamma = [28, 48]
+high_gamma = [48, 90]
 
 
 def load_raw(patient_name):
@@ -24,23 +30,23 @@ def load_raw(patient_name):
 			pass
 		# create the data for these patients...
 		# patient_data = []
-		for i, patient in enumerate(patients): # loop over patients
+		for i, patient in enumerate(patients):  # loop over patients
 			print(patient)
 			patient_dir = preprocessed_location + patient
 			patient_data = {}
-			mem_dir= patient_dir + '/memory/'
+			mem_dir = patient_dir + '/memory/'
 			perc_dir = patient_dir + '/perception/'
-			list_o_leads = np.array(os.listdir(mem_dir)) # loop over leads
-			lead_name = 'eeg_m' # key for memory eegs
-			y_name = 'simVecM' # key for memory y values
+			list_o_leads = np.array(os.listdir(mem_dir))  # loop over leads
+			lead_name = 'eeg_m'  # key for memory eegs
+			y_name = 'simVecM'  # key for memory y values
 			for l in list_o_leads:
-				if '_chan_' in l: # read in lead
+				if '_chan_' in l:  # read in lead
 					mat_contents = sio.loadmat(mem_dir + l)
 					eeg = mat_contents['eeg']
 					if lead_name not in patient_data:
 						patient_data[lead_name] = []
 					patient_data[lead_name].append(eeg)
-				elif '_simVec' in l: # read in the y values
+				elif '_simVec' in l:  # read in the y values
 					mat_contents = sio.loadmat(mem_dir + l)
 					y_vec = mat_contents[y_name]
 					patient_data[y_name] = y_vec
@@ -60,7 +66,7 @@ def load_raw(patient_name):
 					mat_contents = sio.loadmat(perc_dir + l)
 					y_vec = mat_contents[y_name]
 					patient_data[y_name] = y_vec
-		# Now patient data contains all the information we need
+			# Now patient data contains all the information we need
 			patient_data['eeg_m'] = np.array(patient_data['eeg_m'])
 			patient_data['eeg_p'] = np.array(patient_data['eeg_p'])
 			patient_data['simVecM'] = np.array(patient_data['simVecM'])
@@ -90,15 +96,47 @@ def load_raw(patient_name):
 
 	'''
 		patient_data = contains all the data for patient X
-	
 		patient_data['eeg_m'] = all the memory eeg leads
 		patient_data['eeg_p'] = all the perc eeg leads
-	
 		patient_data['simVecM'] # all the memory y values
 		patient_data['simVecP'] # all the perception y values
 	'''
 	return patient_data
 
+
+''' ############################################################################
+## Filter signal
+############################################################################ '''
+
+
+def differencing(x):
+	out = []
+	for i in range(len(x) - 1):
+		out.append(x[i + 1] - x[i])
+	return np.array(out)
+
+
+def lowpass(data, cutoff, fs, order=5):
+	nyq = 0.5 * fs
+	normal_cutoff = cutoff / nyq
+	b, a = butter(order, normal_cutoff, btype='low', analog=False)
+	y = lfilter(b, a, data)
+	return y
+
+
+def highpass(data, cutoff, fs, order=5):
+	nyq = 0.5 * fs
+	normal_cutoff = cutoff / nyq
+	b, a = butter(order, normal_cutoff, btype='high', analog=False)
+	y = filtfilt(b, a, data)
+	return y
+
+
+def filter_signal(data, band, fs=2000.0, order=5):
+	data = differencing(data)
+	y = lowpass(data, band[1], fs, order=order)
+	y = highpass(y, band[0], fs, order=order)
+	return y
 
 # eeg_mem = patient_data['eeg_m']
 #
