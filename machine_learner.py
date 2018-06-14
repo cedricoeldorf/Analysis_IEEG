@@ -141,6 +141,7 @@ def main():
 
 	from separate_leads import segments_patient  # import the function
 	patient_data = segments_patient(patient_data, bin_size=880, overlap=False, overlap_step=220, multithreaded=True)
+
 	patient_data = extract_frequency(patient_data, 'theta', 'alpha')
 
 	features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
