@@ -139,6 +139,7 @@ def filter_signal(data, band, fs=2000.0, order=5):
 	data = differencing(data)
 	y = lowpass(data, band[1], fs, order=order)
 	y = highpass(y, band[0], fs, order=order)
+	np.append(y, [y[-1]])
 	return y
 
 
