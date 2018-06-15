@@ -134,9 +134,9 @@ def main():
 
 	patient = 'raw_FAC002'
 
-	segment_patient_data = False
+	segment_patient_data = True
 	bin_size = 880
-	with_overlap = False
+	with_overlap = True
 	overlap_step_size = 220
 
 	extract_frequency_data = True
@@ -163,7 +163,7 @@ def main():
 	if extract_frequency_data:
 		patient_data = extract_frequency(patient_data, frequency_band_mem, frequency_band_perc, multithreaded=use_multithreading_if_available)
 		print('done extracting frequency bands')
-
+	print(patient_data['eeg_m'].shape)
 	if use_multithreading_if_available:
 		features, feature_names = extract_multithreaded_basic(patient_data['eeg_m'])
 	else:
@@ -198,4 +198,10 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	# main()
+	features, featurename = pickle.load(open('preprocessed/pickle/features_mem_raw_FAC002_True_880_True_220_theta_alpha.pkl', 'rb'))
+	print(features[0,0,0]
+		  )
+
+	# EEG.shape (125, 203, 17, 879)
+	# features.shape (125, 203, 17)
