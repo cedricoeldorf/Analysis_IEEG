@@ -157,13 +157,47 @@ def compress(data, selectors):
 	return [d for d, s in zip(data, selectors) if s]
 
 
-def filter_features(features, y_mem):
-	binned = len(features.shape) == 4
+def filter_features(features, y_mem, binned):
 	y = y_mem.tolist()
 	f = features.tolist()
 
 	if binned:
-		print('not implemented')
+		ind_to_remove = []
+		features_to_keep = []
+		n_leads = len(f)
+		i = 0
+		j = 0
+		while len(features_to_keep) == 0:
+			features_to_keep = [True for _ in range(len(f[i][j][0]))]
+			if i < n_leads - 1:
+				i += 1
+			else:
+				raise Exception('didnt find a lead with more than 0 features... RIP try different value for trial or bin')
+		ymem_per_lead = [y.copy() for _ in range(n_leads)]
+		for lead in range(n_leads):
+			n_trials = len(f[lead])
+			for trial in range(n_trials):
+				n_bins = len(f[lead][trial])
+				for bin in range(n_bins):
+					feature_vector = f[lead][trial][bin]
+					for i, feat in enumerate(feature_vector):
+						if str(feat) == 'nan':
+							features_to_keep[i] = False
+					if len(feature_vector) == 0:
+						ind_to_remove.append((lead, trial))
+						break
+		for i in sorted(ind_to_remove, reverse=True):
+			del f[i[0]][i[1]]
+			del ymem_per_lead[i[0]][i[1]]
+		before = len(f[0][0][0])
+		for lead in range(n_leads):
+			n_trials = len(f[lead])
+			for trial in range(n_trials):
+				n_bins = len(f[lead][trial])
+				for bin in range(n_bins):
+					f[lead][trial][bin] = compress(f[lead][trial][bin], features_to_keep)
+		print('Removed {} out of {} features'.format(before - len(f[0][0][0]), before))
+		return np.array(f), np.array(ymem_per_lead)
 	else:
 		ind_to_remove = []
 		features_to_keep = []
@@ -175,7 +209,7 @@ def filter_features(features, y_mem):
 			if i < n_leads - 1:
 				i += 1
 			else:
-				raise Exception('didnt find a lead with more than 0 features... RIP')
+				raise Exception('didnt find a lead with more than 0 features... RIP try different value for j')
 		ymem_per_lead = [y.copy() for _ in range(n_leads)]
 		for lead in range(n_leads):
 			n_trials = len(f[lead])
@@ -205,7 +239,7 @@ def main():
 
 	patient_name = 'raw_FAC002'
 
-	segment_patient_data = False
+	segment_patient_data = True
 	bin_size = 880
 	with_overlap = False
 	overlap_step_size = 220
@@ -238,7 +272,7 @@ def main():
 			make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc)
 			(features, feature_names) = pickle.load(open(pickle_file, 'rb'))
 
-		features, patient_data['simVecM'] = filter_features(features, patient_data['simVecM'])
+		features, patient_data['simVecM'] = filter_features(features, patient_data['simVecM'], segment_patient_data)
 		print(features.shape, patient_data['simVecM'].shape)
 		accuracies = [0 for _ in range(features.shape[0])]
 		for lead in range(features.shape[0]):
