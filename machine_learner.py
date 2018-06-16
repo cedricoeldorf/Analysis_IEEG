@@ -149,17 +149,17 @@ def make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_s
 	pickle.dump((features, feature_names), open('preprocessed/pickle/features_perc_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc), 'wb'))
 
 
-def filter_features(fnd, ymem):
-	binned = len(fnd.shape) == 3
+def filter_features(features, y_mem):
+	binned = len(features.shape) == 3
+	y = y_mem.tolist()
+	f = features.tolist()
 
 	if binned:
 		print('not implemented')
 	else:
-		ymem = ymem.tolist()
-		f = fnd.tolist()
 		ind_to_remove = []
 		n_leads = len(f)
-		ymem_per_lead = [ymem.copy() for _ in range(n_leads)]
+		ymem_per_lead = [y.copy() for _ in range(n_leads)]
 		for lead in range(n_leads):
 			n_trials = len(f[lead])
 			for trial in range(n_trials):
