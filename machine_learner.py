@@ -8,9 +8,7 @@ from sklearn.feature_selection import RFE
 from collections import Counter
 from load_raw import *
 from separate_leads import *
-
-np.random.seed(0)
-
+import inspect
 
 def knn():
 	knn = KNeighborsClassifier(n_jobs=-1)
@@ -172,7 +170,7 @@ def filter_features(features, y_mem, binned):
 			if i < n_leads - 1:
 				i += 1
 			else:
-				raise Exception('didnt find a lead with more than 0 features... RIP try different value for trial or bin')
+				raise Exception('didnt find a lead with more than 0 features... RIP try different value for trial or bin, in line {}'.format(inspect.currentframe().f_back.f_lineno-6))
 		ymem_per_lead = [y.copy() for _ in range(n_leads)]
 		for lead in range(n_leads):
 			n_trials = len(f[lead])
@@ -209,7 +207,7 @@ def filter_features(features, y_mem, binned):
 			if i < n_leads - 1:
 				i += 1
 			else:
-				raise Exception('didnt find a lead with more than 0 features... RIP try different value for j')
+				raise Exception('didnt find a lead with more than 0 features... RIP try different value for j, in line {}'.format(inspect.currentframe().f_back.f_lineno-6))
 		ymem_per_lead = [y.copy() for _ in range(n_leads)]
 		for lead in range(n_leads):
 			n_trials = len(f[lead])
@@ -236,21 +234,26 @@ def main():
 	##############
 	### params ###
 	##############
+	seed = 0
+
+	cv_folds = 3
 
 	patient_name = 'raw_FAC002'
 
-	segment_patient_data = True
+	segment_patient_data = False
 	bin_size = 880
 	with_overlap = False
 	overlap_step_size = 220
 
-	extract_frequency_data = False
+	extract_frequency_data = True
 	frequency_band_mem = 'theta'
 	frequency_band_perc = 'alpha'
 
 	use_multithreading_if_available = True
 
 	run_prediction = True
+
+	increasing_evidence = False
 
 	if not segment_patient_data:  # dont change this!!!
 		bin_size = ''
@@ -259,6 +262,7 @@ def main():
 	#####################
 	### end of params ###
 	#####################
+	np.random.seed(seed)
 
 	patient_data = load_raw(patient_name)
 	if run_prediction:
@@ -272,18 +276,73 @@ def main():
 			make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc)
 			(features, feature_names) = pickle.load(open(pickle_file, 'rb'))
 
+		print(features.shape)
 		features, patient_data['simVecM'] = filter_features(features, patient_data['simVecM'], segment_patient_data)
-		print(features.shape, patient_data['simVecM'].shape)
-		accuracies = [0 for _ in range(features.shape[0])]
-		for lead in range(features.shape[0]):
-			trials = np.array(features[lead])
-			y_mem = np.array(patient_data['simVecM'][lead]).flatten()
-			kfold = KFold(n_splits=3)
-			model = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01)
-			results = cross_val_score(model, trials, y_mem, cv=kfold)
-			accuracies[lead] = results.mean()
-		print(accuracies)
-		print(max(accuracies))
+		# print(features.shape, patient_data['simVecM'].shape)
+
+		kfold = KFold(n_splits=cv_folds)
+
+		if segment_patient_data:
+			print(features.shape)
+			accuracies = [[[] for _ in range(features.shape[0])] for _ in range(features.shape[2])]
+			for lead in range(features.shape[0]):
+				for bin in range(features.shape[2]):
+					trials_temp = np.array(features[lead])
+					y_mem = np.array(patient_data['simVecM'][lead]).flatten()
+					if increasing_evidence:
+						trials = trials_temp[:, 0:bin+1, :]
+						trials = trials.reshape(trials.shape[0], trials.shape[1] * trials.shape[2])
+					else:
+						trials = trials_temp[:, bin, :]
+					# print(trials.shape)
+					# print(trials)
+
+					param_test1 = {
+						'max_depth': range(3, 10, 2),
+						'min_child_weight': range(1, 6, 1),
+						'n_estimators': range(100, 400, 50),
+					}
+					gsearch1 = GridSearchCV(estimator=xgb.XGBClassifier(learning_rate=0.01, seed=seed, n_jobs=cpu_count()),
+											param_grid=param_test1, n_jobs=cpu_count(), iid=False, cv=cv_folds)
+					gsearch1.fit(trials, y_mem)
+					# print(gsearch1.best_params_, gsearch1.best_score_)
+
+
+					# model = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01, n_jobs=-1)
+					# results = cross_val_score(model, trials, y_mem, cv=kfold)
+					accuracies[bin][lead].append(gsearch1.best_score_)
+					accuracies[bin][lead].append(gsearch1.best_params_)
+			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence), 'wb'))
+			# if increasing_evidence:
+			# 	for bin in range(features.shape[2]):
+			# 		print('bin 0:{} the max accuracy is {}'.format(bin, max(accuracies[bin][:][0])))
+			# else:
+			# 	for bin in range(features.shape[2]):
+			# 		print('bin {}:{} the max accuracy is {}'.format(bin,bin+1, max(accuracies[bin][:][0])))
+		else:
+			accuracies = [[] for _ in range(features.shape[0])]
+			for lead in range(features.shape[0]):
+				trials_temp = np.array(features[lead])
+				y_mem = np.array(patient_data['simVecM'][lead]).flatten()
+
+				param_test1 = {
+					'max_depth': range(3, 10, 2),
+					'min_child_weight': range(1, 6, 1),
+					'n_estimators': range(100, 400, 50),
+				}
+				gsearch1 = GridSearchCV(estimator=xgb.XGBClassifier(learning_rate=0.01, seed=seed, n_jobs=cpu_count()),
+										param_grid=param_test1, n_jobs=cpu_count(), iid=False, cv=cv_folds)
+				gsearch1.fit(trials_temp, y_mem)
+
+				accuracies[lead].append(gsearch1.best_score_)
+				accuracies[lead].append(gsearch1.best_params_)
+				# model = xgb.XGBClassifier(max_depth=3, n_estimators=300, learning_rate=0.01)
+				# trials = trials_temp
+				# results = cross_val_score(model, trials, y_mem, cv=kfold)
+				# accuracies[lead] = results.mean()
+			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence), 'wb'))
+			print(accuracies)
+			print(max(accuracies))
 	else:
 		make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc)
 
@@ -301,7 +360,16 @@ def main():
 
 
 if __name__ == '__main__':
-	main()
+	# main()
+	accuracies = np.asarray(pickle.load(open('preprocessed/pickle/accuracies_raw_FAC002_True_880_False_220_False_theta_alpha_True.pkl', 'rb')))
+	print(accuracies.shape)
+	for bin in range(accuracies.shape[0]):
+		leads = accuracies[bin]
+		max_val = np.max(leads[:, 0])
+		max_ix = np.argmax(leads[:, 0])
+		print('bin {}-{} : Lead {} got highest accuracy {} with params {}'.format(0, bin+1, max_ix, max_val, leads[max_ix, 1]))
+		# for best_score, best_params in zip(leads[:, 0], leads[:, 1]):
+		# 	print(best_score, best_params)
 
 # EEG.shape (125, 203, 17, 879)
 # features.shape (125, 203, 17)
