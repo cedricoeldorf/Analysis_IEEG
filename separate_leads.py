@@ -208,7 +208,7 @@ def normilise_multithreaded(eeg, n_jobs):
 		for lead in range(n_leads):
 			signal = eeg[lead][trial]
 			tasks.append([signal, queue, lead, trial])
-	for _ in tqdm.tqdm(pool.imap_unordered(execute_segment, tasks), total=len(tasks)):
+	for _ in tqdm.tqdm(pool.imap_unordered(excute_normilise, tasks), total=len(tasks)):
 		pass
 	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
 	del tasks
