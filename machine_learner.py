@@ -267,7 +267,7 @@ def main():
 	with_overlap = False
 	overlap_step_size = 220
 
-	extract_frequency_data = True
+	extract_frequency_data = False
 	frequency_band_mem = 'theta'
 	frequency_band_perc = 'alpha'
 
@@ -388,8 +388,8 @@ def main():
 if __name__ == '__main__':
 	main()
 
-	patient_name = 'raw_FAC007'
-	p = load_raw(patient_name)
+	# patient_name = 'raw_FAC007'
+	# p = load_raw(patient_name)
 	# accuracies = np.asarray(pickle.load(open('preprocessed/pickle/accuracies_raw_FAC002_True_880_False_220_False_theta_alpha_False.pkl', 'rb')))
 	# print(accuracies.shape)
 	# for bin in range(accuracies.shape[0]):

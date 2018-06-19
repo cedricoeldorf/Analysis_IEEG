@@ -224,7 +224,7 @@ def normilise_multithreaded(eeg, n_jobs):
 def normilise_patient_data(patient_data, n_jobs=-1):
 	patient_data['eeg_m'] = normilise_multithreaded(patient_data['eeg_m'], n_jobs)
 	patient_data['eeg_p'] = normilise_multithreaded(patient_data['eeg_p'], n_jobs)
-
+	return patient_data
 
 def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, include_last_window=True):
 	n_trials = lead_matrix.shape[0]

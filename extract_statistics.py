@@ -10,7 +10,7 @@ from scipy.signal import savgol_filter
 from scipy.stats import variation
 import warnings
 
-warnings.filterwarnings("ignore")
+# warnings.filterwarnings("ignore")
 
 
 ####################################
