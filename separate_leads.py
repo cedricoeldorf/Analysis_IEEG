@@ -63,7 +63,7 @@ def window(signal, window_size=4, step_size=2):
 	return view
 
 
-def execute(args):
+def execute_segment(args):
 	try:
 		p = psutil.Process(os.getpid())
 		p.nice(10)  # set
@@ -93,7 +93,7 @@ def segment_multithreaded_eeg(eeg, bin_size, overlap, overlap_step, n_jobs=-1):
 		for lead in range(n_leads):
 			signal = eeg[lead][trial]
 			tasks.append([signal, queue, bin_size, overlap, overlap_step, lead, trial])
-	for _ in tqdm.tqdm(pool.imap_unordered(execute, tasks), total=len(tasks)):
+	for _ in tqdm.tqdm(pool.imap_unordered(execute_segment, tasks), total=len(tasks)):
 		pass
 	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
 	del tasks
@@ -144,7 +144,7 @@ def segment_eeg(eeg, bin_size, overlap, overlap_step, separate_bands=False):
 	return result_eeg
 
 
-def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50, multithreaded=False, n_jobs=-1):
+def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50, multithreaded=True, n_jobs=-1):
 	"""
 	bin_size : the size of the bins for windowing, if it doensn't divide nicely it doesn't crash but just have approx equal sized bins
 	overlap : whether the bins should overlap
@@ -160,6 +160,51 @@ def segments_patient(patient_data, bin_size=200, overlap=False, overlap_step=50,
 		patient_data['eeg_p'] = segment_eeg(patient_data['eeg_p'], bin_size, overlap, overlap_step)
 
 	return patient_data
+
+
+def excute_normilise(args):
+	try:
+		p = psutil.Process(os.getpid())
+		p.nice(10)  # set
+	except:
+		pass
+
+	signal, queue, lead, trial = args[0], args[1], args[2], args[3]
+	normilised = (signal - np.min(signal)) / (np.max(signal) - np.min(signal))
+	queue.put((lead, trial, normilised))
+
+
+def normilise_multithreaded(eeg, n_jobs):
+	n_leads = eeg.shape[0]
+	n_trials = eeg.shape[1]
+	tasks = []
+	if n_jobs == -1:
+		pool = Pool(cpu_count())
+	else:
+		pool = Pool(n_jobs)
+	manager = Manager()
+	queue = manager.Queue()
+
+	for trial in range(n_trials):
+		for lead in range(n_leads):
+			signal = eeg[lead][trial]
+			tasks.append([signal, queue, lead, trial])
+	for _ in tqdm.tqdm(pool.imap_unordered(execute_segment, tasks), total=len(tasks)):
+		pass
+	result_eeg = [[[] for _ in range(n_trials)] for _ in range(n_leads)]
+	del tasks
+	while not queue.empty():
+		(lead, trial, normilised) = queue.get()
+		result_eeg[lead][trial] = normilised
+	result_eeg = np.array(result_eeg)
+	pool.close()
+	pool.join()
+	return result_eeg
+
+
+def normilise_patient_data(patient_data, n_jobs=-1):
+	patient_data['eeg_m'] = normilise_multithreaded(patient_data['eeg_m'], n_jobs)
+	patient_data['eeg_p'] = normilise_multithreaded(patient_data['eeg_p'], n_jobs)
 
 
 def segment_lead_matrix(lead_matrix, bin_size, overlap=False, overlap_step=10, include_last_window=True):

@@ -44,6 +44,7 @@ def load_raw(patient_name):
 			y_name = 'simVecM'  # key for memory y values
 			for l in list_o_leads:
 				if '_chan_' in l:  # read in lead
+					print(mem_dir + l)
 					mat_contents = sio.loadmat(mem_dir + l)
 					eeg = mat_contents['eeg']
 					if lead_name not in patient_data:

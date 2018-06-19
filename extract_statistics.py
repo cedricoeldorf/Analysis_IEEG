@@ -1,15 +1,17 @@
+import os
+import psutil
+import time
+from multiprocessing import Pool, Manager, cpu_count
 import numpy as np
+import tqdm
+import tsfresh.feature_extraction.feature_calculators as ts
+from scipy.ndimage.interpolation import shift
 from scipy.signal import savgol_filter
 from scipy.stats import variation
-from scipy.ndimage.interpolation import shift
-import peakutils, time
-from multiprocessing import Pool, Manager, cpu_count
-import tsfresh.feature_extraction.feature_calculators as ts
-import os, psutil
-import tqdm
 import warnings
 
 warnings.filterwarnings("ignore")
+
 
 ####################################
 ## Extract statistics for every lead and create AV table
@@ -70,7 +72,7 @@ def extract_multithreaded_basic(X, n_jobs=-1):
 def execute(args):
 	try:
 		p = psutil.Process(os.getpid())
-		p.nice(10)  # set
+		p.nice(5)  # set
 	except:
 		pass
 	# tic = time.time()
@@ -117,7 +119,7 @@ def execute(args):
 		feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
 		features = np.append(features, crest(signal))
 		feature_names = np.append(feature_names, np.array(['crest']))
-		features = np.append(features, RAPN(signal))
+		features = np.append(features, RAPN(signal, peaks, valleys))
 		feature_names = np.append(feature_names, np.array(['RAPN']))
 		features = np.append(features, RTRF(peaks, valleys))
 		feature_names = np.append(feature_names, np.array(['RTRF']))
@@ -137,7 +139,6 @@ def execute(args):
 		queue.put((lead, trial, bin, features, feature_names))
 	except:
 		queue.put((lead, trial, bin, np.array([]), np.array([])))
-
 
 
 def extract_basic(X):
@@ -169,7 +170,7 @@ def extract_basic(X):
 			feature_names = np.append(feature_names, np.array(['Amplitude1', 'Amplitude2', 'Amplitude3', 'Amplitude4', 'Amplitude5', 'Amplitude6']))
 			small = np.append(small, crest(signal))
 			feature_names = np.append(feature_names, np.array(['crest']))
-			small = np.append(small, RAPN(signal))
+			small = np.append(small, RAPN(signal, peaks, valleys))
 			feature_names = np.append(feature_names, np.array(['RAPN']))
 			small = np.append(small, RTRF(peaks, valleys))
 			feature_names = np.append(feature_names, np.array(['RTRF']))
@@ -405,17 +406,17 @@ def crest(signal):
 
 
 # Feature #28
-def RAPN(signal):
+def RAPN(signal, peaks, valleys):
 	""" Feature #28
 
 		Returns: Mean of positive amplitudes / mean of negative amplitudes
 	"""
 	# Get max indices
 	# max_indices = peakutils.indexes(signal)
-	max_indices = peakutils.indexes(signal, thres=0.02 / max(signal), min_dist=0.1)
+	max_indices = peaks
 	# Get min indices
 	# min_indices = peakutils.indexes(signal*(-1))
-	min_indices = peakutils.indexes(signal * (-1), thres=0.02 / max(signal * (-1)), min_dist=0.1)
+	min_indices = valleys
 	# Mean of positive amplitudes
 	mean_of_pos = np.mean([signal[i] for i in max_indices])
 	# Mean of negative amplitudes
@@ -587,7 +588,7 @@ def absolute_slopes_features(signal, ind, vertices):
 	vertices = vertices[ind]
 	vertices_lag = shift(vertices, -1, cval=1)
 	signal = signal[ind]
-	signal_lag = shift(signal, -1, cval=0)
+	signal_lag = shift(signal, -1, cval=1)
 	slope_amplitude = abs(signal / signal_lag)
 	slope_MEAN = slope_amplitude.mean()
 	slope_SD = slope_amplitude.std()
@@ -652,7 +653,6 @@ def TS_feature3(signal):
 #     return agg_coorelation,linear_trend, coeffi, dicky, cwt_coeffi,fried,mass_quant
 
 
-
 def TS_features5(signal):
 	# ts features with
 	mts = 2
@@ -669,8 +669,6 @@ def TS_features6(signal):
 
 
 # ts features with lags
-
-
 
 
 def TS_feature7(signal):
@@ -724,8 +722,7 @@ def TS_features12(signal):
 	sum_v = ts.sum_values(signal)
 	variance = ts.variance(signal)
 	variance_larger_than_sd = ts.variance_larger_than_standard_deviation(signal)
-
-	return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance,
+	return stand_deviation, sum_reoccurring, sum_r_value, sum_v, variance, variance_larger_than_sd
 
 
 def TS_feature13(signal, min, max):

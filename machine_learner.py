@@ -125,7 +125,10 @@ def xgboost():
 '''
 
 
-def make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc):
+def make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise):
+	if normilise:
+		patient_data = normilise_patient_data(patient_data)
+
 	if segment_patient_data:
 		patient_data = segments_patient(patient_data, bin_size=bin_size, overlap=with_overlap, overlap_step=overlap_step_size, multithreaded=use_multithreading_if_available)
 		print('done segmenting ')
@@ -238,7 +241,9 @@ def main():
 
 	cv_folds = 3
 
-	patient_name = 'raw_FAC002'
+	patient_name = 'raw_FAC007'
+
+	normilise_signal = True
 
 	segment_patient_data = False
 	bin_size = 880
@@ -251,7 +256,7 @@ def main():
 
 	use_multithreading_if_available = True
 
-	run_prediction = True
+	run_prediction = False
 
 	increasing_evidence = False
 
@@ -259,6 +264,10 @@ def main():
 		bin_size = ''
 		with_overlap = ''
 		overlap_step_size = ''
+	if normilise_signal:
+		normilise_signal_label = str(normilise_signal)
+	else:
+		normilise_signal_label = ''
 	#####################
 	### end of params ###
 	#####################
@@ -266,14 +275,14 @@ def main():
 
 	patient_data = load_raw(patient_name)
 	if run_prediction:
-		pickle_file = 'preprocessed/pickle/features_mem_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc)
+		pickle_file = 'preprocessed/pickle/features_mem_{}_{}_{}_{}_{}_{}_{}_{}_n{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal_label)
 		print('using file :', pickle_file)
 
 		try:
 			features, feature_names = pickle.load(open(pickle_file, 'rb'))
 		except:
 			print('pickles not found, making them now..')
-			make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc)
+			make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal)
 			(features, feature_names) = pickle.load(open(pickle_file, 'rb'))
 
 		print(features.shape)
@@ -312,7 +321,7 @@ def main():
 					# results = cross_val_score(model, trials, y_mem, cv=kfold)
 					accuracies[bin][lead].append(gsearch1.best_score_)
 					accuracies[bin][lead].append(gsearch1.best_params_)
-			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence), 'wb'))
+			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence, normilise_signal_label), 'wb'))
 			# if increasing_evidence:
 			# 	for bin in range(features.shape[2]):
 			# 		print('bin 0:{} the max accuracy is {}'.format(bin, max(accuracies[bin][:][0])))
@@ -340,11 +349,11 @@ def main():
 				# trials = trials_temp
 				# results = cross_val_score(model, trials, y_mem, cv=kfold)
 				# accuracies[lead] = results.mean()
-			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence), 'wb'))
+			pickle.dump(accuracies, open('preprocessed/pickle/accuracies_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, increasing_evidence, normilise_signal_label), 'wb'))
 			print(accuracies)
 			print(max(accuracies))
 	else:
-		make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc)
+		make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_size, with_overlap, overlap_step_size, use_multithreading_if_available, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal_label)
 
 	'''
 	10 - fold
@@ -360,14 +369,17 @@ def main():
 
 
 if __name__ == '__main__':
-	# main()
-	accuracies = np.asarray(pickle.load(open('preprocessed/pickle/accuracies_raw_FAC002_True_880_False_220_False_theta_alpha_True.pkl', 'rb')))
-	print(accuracies.shape)
-	for bin in range(accuracies.shape[0]):
-		leads = accuracies[bin]
-		max_val = np.max(leads[:, 0])
-		max_ix = np.argmax(leads[:, 0])
-		print('bin {}-{} : Lead {} got highest accuracy {} with params {}'.format(0, bin+1, max_ix, max_val, leads[max_ix, 1]))
+	main()
+
+	patient_name = 'raw_FAC007'
+	p = load_raw(patient_name)
+	# accuracies = np.asarray(pickle.load(open('preprocessed/pickle/accuracies_raw_FAC002_True_880_False_220_False_theta_alpha_False.pkl', 'rb')))
+	# print(accuracies.shape)
+	# for bin in range(accuracies.shape[0]):
+	# 	leads = accuracies[bin]
+	# 	max_val = np.max(leads[:, 0])
+	# 	max_ix = np.argmax(leads[:, 0])
+	# 	print('bin {}-{} : Lead {} got highest accuracy {} with params {}'.format(0, bin+1, max_ix, max_val, leads[max_ix, 1]))
 		# for best_score, best_params in zip(leads[:, 0], leads[:, 1]):
 		# 	print(best_score, best_params)
 
