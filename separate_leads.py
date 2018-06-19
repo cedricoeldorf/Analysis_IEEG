@@ -4,6 +4,25 @@ import pickle
 import os
 
 ''' ############################################################################
+## Normalize signal
+########################################################################### '''
+
+def normalize(signal, range=None, offset=None):
+
+	'''
+	# If range = None and Offset = None:
+		- return normalized signal with values in range (0,1)
+	# Range squeezes the signal between range(-range, +range)
+	# Offet adds offset...
+	'''
+	norm_sig = (signal - np.min(signal))/(np.max(signal) - np.min(signal))
+	if range is not None:
+		norm_sig = (2*norm_sig - 1)*range
+	if offset is not None:
+		norm_sig = norm_sig + offset
+	return norm_sig
+
+''' ############################################################################
 ## Seprate leads
 ########################################################################### '''
 
