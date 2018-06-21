@@ -286,24 +286,24 @@ if __name__ == '__main__':
 	y_p = patient_data['simVecP']
 
 	print("RUN ON SAMPLE")
-	eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
-	eeg_m = eeg_m[0:5]
-	eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
-	eeg_m = eeg_m[0:7]
+	#eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
+	#eeg_m = eeg_m[0:6]
+	#eeg_m = eeg_m.reshape(eeg_m.shape[1],eeg_m.shape[0],22,200)
+	#eeg_m = eeg_m[0:8]
 
-	eeg_p = eeg_p.reshape(eeg_p.shape[1],eeg_p.shape[0],22,200)
-	eeg_p = eeg_p[0:5]
-	eeg_p = eeg_p.reshape(eeg_p.shape[1],eeg_p.shape[0],22,200)
-	eeg_p = eeg_p[0:7]
+	#eeg_p = eeg_p.reshape(eeg_p.shape[1],eeg_p.shape[0],22,200)
+	#eeg_p = eeg_p[0:6]
+	#eeg_p = eeg_p.reshape(eeg_p.shape[1],eeg_p.shape[0],22,200)
+	#eeg_p = eeg_p[0:8]
 
 	binned_m = extract_multithreaded_basic(eeg_m)
 	if not os.path.exists('./preprocessed/eeg_split'):
 		os.makedirs('./preprocessed/eeg_split')
 	with open('./preprocessed/eeg_split/bin_mem_' + str(type_sig) +'.pkl', 'wb') as f:
 		pickle.dump(binned_m, f)
-
+	del binned_m
 	binned_m = extract_multithreaded_basic(eeg_p)
 	if not os.path.exists('./preprocessed/eeg_split'):
 		os.makedirs('./preprocessed/eeg_split')
-	with open('./preprocessed/eeg_split/bin_perc_' + str(type_sig) +'.pkl', 'wb') as f:
+	with open('./preprocessed/eeg_split/' + str(type_sig) +'.pkl', 'wb') as f:
 		pickle.dump(binned_m, f)

@@ -11,7 +11,7 @@ import pickle
 from load_raw import load_raw
 import os
 import tqdm
-
+from machine_learner import filter_features
 
 def get_importances(slopes, target):
 	#############################
@@ -21,18 +21,30 @@ def get_importances(slopes, target):
 
 	for lead in range(slopes.shape[0]):
 		for feature in range(slopes.shape[1]):
-			for trial in range(slopes.shape[2]):
-				if slopes[lead][feature][trial] < 0:
-					slopes[lead][feature][trial] = -1
-				else:
-					slopes[lead][feature][trial] = 1
+
+			if (np.any(slopes[lead][feature] < 0)) and (np.any(slopes[lead][feature] > 0)):
+				print("NOT")
+				for trial in range(slopes.shape[2]):
+
+					if slopes[lead][feature][trial] < 0:
+						slopes[lead][feature][trial] = -1
+					else:
+						slopes[lead][feature][trial] = 1
+			else:
+				print("ALL PURE")
+				mean = slopes[lead][feature].mean()
+				for trial in range(slopes.shape[2]):
+					if slopes[lead][feature][trial] < mean:
+						slopes[lead][feature][trial] = -1
+					else:
+						slopes[lead][feature][trial] = 1
 
 	importance = []
 	# iterate over leads
 	for z in range(slopes.shape[0]):
 		acc = []
 		for x in range(slopes.shape[1]):
-			acc.append(accuracy_score(target, slopes[z][x]))
+			acc.append(accuracy_score(target[x].ravel(), slopes[z][x]))
 
 		importance.append(acc)
 
@@ -44,12 +56,13 @@ def get_importances(slopes, target):
 
 
 def multithread_slope_extraction(X):
-	pool = Pool(cpu_count())
+	pool = Pool(20)
 
 	m = Manager()
 	queue = m.Queue()  # create queue to save all the results
 	tasks = []
 	X = np.nan_to_num(X)
+
 	X = X.reshape(X.shape[0], X.shape[1], X.shape[3], X.shape[2])
 
 	n_features = X.shape[3]
@@ -81,6 +94,7 @@ def multithread_average_slope(X, removal=False, bottom_thresh=0, top_thresh=0):
 	tasks = []
 
 	# LEAD
+
 	X = X.reshape(X.shape[0], X.shape[2], X.shape[1])
 	avs = [[[] for _ in range(X.shape[1])] for _ in range(X.shape[0])]
 	for lead in range(X.shape[0]):
@@ -118,39 +132,72 @@ def execute_slope(args):
 ## RUN
 ##############################################
 
-filenames = ['binned_all_features_002_m.pkl','binned_all_features_002_p.pkl']
-for filename in filenames:
-    with open('./preprocessed/eeg_split/' + filename, 'rb') as f:
-    	eeg_m =	pickle.load(f)
-    feature_names = eeg_m[1]
-    eeg_m = eeg_m[0]
-    patient_data = load_raw('raw_FAC002')
-    target = patient_data['simVecM'][0:eeg_m.shape[1]]
-    del patient_data
+#filenames = ['binned_all_features_002_m.pkl','binned_all_features_002_p.pkl']
+#filenames = ['bin_perc_filtered.pkl', 'bin_mem_filtered.pkl']
+patient_name = 'raw_FAC007'
+segment_patient_data = True
+bin_size = 880
+with_overlap = False
+overlap_step_size = 220
+extract_frequency_data = True
+frequency_band_mem = 'theta'
+frequency_band_perc = 'alpha'
+normilise_signal = True
+decision_name = 'perc'
+pickle_file = './preprocessed/pickle/features_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(decision_name, patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal)
 
-    ###########
-    ## GET SLOPES
-    q = multithread_slope_extraction(eeg_m)
+#filenames = ['features_mem_raw_FAC002_True_880_False_220_True_theta_alpha.pkl', 'features_perc_raw_FAC002_True_880_False_220_True_theta_alpha.pkl']
+#for filename in filenames:
 
-    if not os.path.exists('./preprocessed/eeg_split'):
-        os.makedirs('./preprocessed/eeg_split')
-    with open('./preprocessed/eeg_split/slopes_' + filename +'.pkl', 'wb') as f:
-    	pickle.dump(q, f)
+with open(pickle_file, 'rb') as f:
+	eeg_m =	pickle.load(f)
+feature_names = eeg_m[1]
+eeg_m = eeg_m[0]
+patient_data = load_raw(patient_name)
+if decision_name == 'perc':
+	target = patient_data['simVecP'][0:eeg_m.shape[1]]
+else:
+	target = patient_data['simVecM'][0:eeg_m.shape[1]]
 
-    s = deepcopy(q)
-    d = deepcopy(q)
-    del q
+del patient_data
 
-    ###########
-    ## GET AVERAGE SLOPES
-    a = multithread_average_slope(s)
-    if not os.path.exists('./preprocessed/eeg_split'):
-        os.makedirs('./preprocessed/eeg_split')
-    with open('./preprocessed/eeg_split/average_slopes_' + filename +'.pkl', 'wb') as f:
-    	pickle.dump(a, f)
+eeg_m, target = filter_features(eeg_m,target, True)
 
-    ###########
-    ## GET SLOPE CORRELATION TO TARGET
-    important = get_importances(d,target)
-    with open('./preprocessed/eeg_split/important_slopes_' + filename +'.pkl', 'wb') as f:
-    	pickle.dump(important, f)
+###########
+## GET SLOPES
+q = multithread_slope_extraction(eeg_m)
+
+if not os.path.exists('./preprocessed/eeg_split'):
+	os.makedirs('./preprocessed/eeg_split')
+filename = './preprocessed/eeg_split/slopes_features_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(decision_name, patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal)
+with open(filename, 'wb') as f:
+	pickle.dump(q, f)
+
+s = deepcopy(q)
+d = deepcopy(q)
+del q
+
+###########
+## GET AVERAGE SLOPES
+# a = multithread_average_slope(s)
+# if not os.path.exists('./preprocessed/eeg_split'):
+# 	os.makedirs('./preprocessed/eeg_split')
+# with open('./preprocessed/eeg_split/average_slopes_' + filename +'.pkl', 'wb') as f:
+# 	pickle.dump(a, f)
+
+###########
+## GET SLOPE CORRELATION TO TARGET
+important = get_importances(d,target)
+filename = './preprocessed/eeg_split/importances_features_{}_{}_{}_{}_{}_{}_{}_{}_{}_{}.pkl'.format(decision_name, patient_name, segment_patient_data, bin_size, with_overlap, overlap_step_size, extract_frequency_data, frequency_band_mem, frequency_band_perc, normilise_signal)
+with open(filename, 'wb') as f:
+	pickle.dump(important, f)
+
+keepers_all = []
+for lead in range(len(important)):
+	keepers_feature = []
+	for feature in range(len(important[lead])):
+		if (important[lead][feature] < 0.42) or  (important[lead][feature] > 0.58):
+			keepers_feature.append(feature)
+	keepers_all.append(keepers_feature)
+with open(pickle_file, 'wb') as f:
+	pickle.dump(keepers_all, f)

@@ -159,8 +159,22 @@ def make_feature_pickles(patient_name, patient_data, segment_patient_data, bin_s
 def compress(data, selectors):
 	return [d for d, s in zip(data, selectors) if s]
 
+def normalize(signal, range=None, offset=None):
+	'''
+	# If range = None and Offset = None:
+		- return normalized signal with values in range (0,1)
+	# Range squeezes the signal between range(-range, +range)
+	# Offet adds offset...
+	'''
+	norm_sig = (signal - np.min(signal))/(np.max(signal) - np.min(signal))
+	if range is not None:
+		norm_sig = (2*norm_sig - 1)*range
+	if offset is not None:
+		norm_sig = norm_sig + offset
+	return norm_sig
 
-def filter_features(features, y_mem, binned, normalize=True):
+
+def filter_features(features, y_mem, binned, normie = True):
 	y = y_mem.tolist()
 	f = features.tolist()
 
@@ -233,7 +247,9 @@ def filter_features(features, y_mem, binned, normalize=True):
 				f[lead][trial] = compress(f[lead][trial], features_to_keep)
 		print('Removed {} out of {} features'.format(before - len(f[0][0]), before))
 
-		if normalize:
+
+		if normie:
+			n_leads = len(f)
 			if binned:
 				for lead in range(n_leads):
 					n_trials = len(f[lead])
