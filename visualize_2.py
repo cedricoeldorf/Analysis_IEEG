@@ -365,13 +365,15 @@ def plot_brain_region(path_importances, path_brain_regions, set_threshold=True, 
 ## EX
 ########################################################################### '''
 
-path_importances = 'preprocessed/importances/'
-path_brain_regions = './preprocessed/lead_coordinates/'
+if __name__ == '__main__':
+    
+    path_importances = 'preprocessed/importances/'
+    path_brain_regions = './preprocessed/lead_coordinates/'
 
-patient_data, patient_ids = load_data(path_importances)
-brain_regions = [path_brain_regions + 'patient_' + str(patient_ids[i]) + '/' for i in range(len(patient_ids))]
+    patient_data, patient_ids = load_data(path_importances)
+    brain_regions = [path_brain_regions + 'patient_' + str(patient_ids[i]) + '/' for i in range(len(patient_ids))]
 
-FROM = 3
-TO = len(patient_ids)
-for i in range(FROM, TO):
-    plot_brain_region(patient_data[i], brain_regions[i], set_threshold=True)
+    FROM = 3
+    TO = len(patient_ids)
+    for i in range(FROM, TO):
+        plot_brain_region(patient_data[i], brain_regions[i], set_threshold=True)
